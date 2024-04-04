@@ -1,40 +1,24 @@
+// Pathfinder.h
+
 #ifndef PATHFINDER_H
 #define PATHFINDER_H
 
 #include <vector>
-#include <unordered_map>
-#include <utility>
-#include <cstdlib>
-#include <algorithm>
-
+#include <map>
+#include "Position.h"
+#include "PositionHash.h"
 
 class Pathfinder {
-private:
-    std::vector<std::vector<int>> grid;
-    int rows, cols;
-    std::vector<std::pair<int, int>> dynamicObstacles;
-
-    double calculateHeuristic(int x1, int y1, int x2, int y2);
-    std::vector<std::pair<int, int>> getNeighbors(int x, int y);
-
 public:
-    Pathfinder(const std::vector<std::vector<int>>& grid);
+    Pathfinder();
 
-    void setDynamicObstacles(const std::vector<std::pair<int, int>>& obstacles);
-    std::vector<std::pair<int, int>> findPath(int startX, int startY, int goalX, int goalY);
-    std::pair<int, int> getRandomFreePosition();
+    std::vector<Position> findPath(const Position& start, const Position& goal);
 
-    std::vector<std::vector<int>> getGrid() const {
-        return grid;
-    }
-
-    int getRows() const {
-        return rows;
-    }
-
-    int getCols() const {
-        return cols;
-    }
+private:
+    std::vector<Position> reconstructPath(std::map<Position, Position>& cameFrom, Position current);
+    double heuristicCostEstimate(const Position& start, const Position& goal);
+    std::vector<Position> getNeighborPositions(const Position& current);
+    bool isValidPosition(const Position& position);
 };
 
-#endif
+#endif 

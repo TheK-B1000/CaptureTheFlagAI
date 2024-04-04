@@ -58,10 +58,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Agent.cpp" />
-    <ClCompile Include="Brain.cpp" />
-    <ClCompile Include="Communication.cpp" />
-    <ClCompile Include="Memory.cpp" />
+    <ClCompile Include="FlagManager.cpp" />
+    <ClCompile Include="GameManager.cpp" />
     <ClCompile Include="Pathfinder.cpp" />
+    <ClCompile Include="TagManager.cpp" />
     <QtRcc Include="CaptureTheFlagV001.qrc" />
     <QtUic Include="CaptureTheFlagV001.ui" />
     <QtMoc Include="CaptureTheFlagV001.h" />
@@ -73,10 +73,12 @@
     <QtMoc Include="GameField.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Position.h" />
+    <ClInclude Include="PositionHash.h" />
+    <ClInclude Include="TagManager.h" />
     <QtMoc Include="Agent.h" />
-    <ClInclude Include="Brain.h" />
-    <ClInclude Include="Communication.h" />
-    <ClInclude Include="Memory.h" />
+    <ClInclude Include="FlagManager.h" />
+    <ClInclude Include="GameManager.h" />
     <ClInclude Include="Pathfinder.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

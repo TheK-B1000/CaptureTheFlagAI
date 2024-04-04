@@ -7,6 +7,9 @@
 #include <QTimer>
 #include "Agent.h"
 #include "Pathfinder.h"
+#include "TagManager.h"
+#include "FlagManager.h"
+#include "GameManager.h"
 
 class GameField : public QGraphicsView {
     Q_OBJECT
@@ -15,6 +18,17 @@ public:
     GameField(QWidget* parent = nullptr);
     ~GameField();
 
+    static double getDistance(const QPointF& point1, const QPointF& point2);
+    bool isInHomeZone(const QPointF& position, int teamId) const;
+    static double getDistance(const Position& point1, const Position& point2);
+    bool isInHomeZone(const Position& position, int teamId) const;
+
+    std::vector<Agent*> getTeamAgents(int teamId) const;
+
+    const std::vector<Agent*>& getBlueAgents() const;
+    const std::vector<Agent*>& getRedAgents() const;
+
+
 private slots:
     void updateAgents();
     void handleGameTimerTimeout();
@@ -22,32 +36,18 @@ private slots:
 
 private:
     QGraphicsScene* scene;
-    std::vector<Agent*> blueAgents;
-    std::vector<Agent*> redAgents;
     Pathfinder* pathfinder;
     int cellSize;
-    int blueScore;
-    int redScore;
-    int timeRemaining;
-    QTimer* gameTimer;
-    float taggingDistance;
-    QGraphicsTextItem* timeRemainingTextItem;
     QGraphicsTextItem* blueScoreTextItem;
     QGraphicsTextItem* redScoreTextItem;
+    TagManager* tagManager;
+    FlagManager* flagManager;
+    GameManager* gameManager;
+    Position getHomeZoneCenter(int teamId) const;
+    qreal getHomeZoneRadius(int teamId) const;
 
-    void updateAgentPositions();
-    void updateAgentItemsPositions();
-    void checkTagging();
-    QGraphicsItem* getAgentItem(Agent* agent);
-    void updateAgentItem(QGraphicsItem* item, const std::vector<Agent*>& agents, QColor color);
-    void updateSceneItems();
-    void resetEnemyFlag(const QString& team);
-    QGraphicsEllipseItem* findFlagItem(const QString& team);
-    void updateScoreDisplay();
-    void updateTimeDisplay();
     void setupScene();
     void stopGame();
-    void declareWinner();
 };
 
 #endif

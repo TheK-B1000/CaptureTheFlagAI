@@ -1,115 +1,97 @@
+// Pathfinder.cpp
+
 #include "Pathfinder.h"
-#include "Agent.h"
-#include <queue>
-#include <cmath>
+#include <unordered_set>
 #include <algorithm>
-#include <unordered_map>
-#include <iostream>
-#include <QDebug>
-#include <qlogging.h>
 
-Pathfinder::Pathfinder(const std::vector<std::vector<int>>& grid) : grid(grid) {
-    rows = grid.size();
-    cols = grid[0].size();
-}
+Pathfinder::Pathfinder() {}
 
-void Pathfinder::setDynamicObstacles(const std::vector<std::pair<int, int>>& obstacles) {
-    dynamicObstacles = obstacles;
-}
+std::vector<Position> Pathfinder::findPath(const Position& start, const Position& goal) {
+    std::unordered_set<Position, PositionHash> openSet;
+    openSet.insert(start);
 
-double Pathfinder::calculateHeuristic(int x1, int y1, int x2, int y2) {
-    int dx = std::abs(x1 - x2);
-    int dy = std::abs(y1 - y2);
-    return static_cast<double>(dx + dy);
-}
+    std::map<Position, Position> cameFrom;
 
-std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, int goalX, int goalY) {
-    std::priority_queue<std::pair<double, std::pair<int, int>>, std::vector<std::pair<double, std::pair<int, int>>>, std::greater<std::pair<double, std::pair<int, int>>>> openSet;
-    std::unordered_map<std::pair<int, int>, double, pair_hash> gScore;
-    std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash> cameFrom;
+    std::map<Position, double> gScore;
+    gScore[start] = 0;
 
-    openSet.push({ 0.0, {startX, startY} });
-    gScore[{startX, startY}] = 0.0;
-
-    qDebug() << "Pathfinder: Starting pathfinding from" << startX << startY << "to" << goalX << goalY;
+    std::map<Position, double> fScore;
+    fScore[start] = heuristicCostEstimate(start, goal);
 
     while (!openSet.empty()) {
-        std::pair<int, int> current = openSet.top().second;
-        openSet.pop();
+        Position current = *std::min_element(openSet.begin(), openSet.end(),
+            [&](const Position& a, const Position& b) {
+                return fScore[a] < fScore[b];
+            });
 
-        qDebug() << "Pathfinder: Current node:" << current.first << current.second;
-
-        if (current.first == goalX && current.second == goalY) {
-            qDebug() << "Pathfinder: Goal reached!";
-
-            std::vector<std::pair<int, int>> path;
-            while (current != std::make_pair(startX, startY)) {
-                path.push_back(current);
-                current = cameFrom[current];
-            }
-            std::reverse(path.begin(), path.end());
-
-            qDebug() << "Pathfinder: Generated path:";
-            for (const auto& point : path) {
-                qDebug() << point.first << point.second;
-            }
-
-            return path;
+        if (current == goal) {
+            return reconstructPath(cameFrom, current);
         }
 
-        qDebug() << "Pathfinder: Exploring neighbors...";
+        openSet.erase(current);
 
-        for (const auto& neighbor : getNeighbors(current.first, current.second)) {
-            double tentativeGScore = gScore[current] + 1;
-
-            qDebug() << "Pathfinder: Neighbor:" << neighbor.first << neighbor.second << "Tentative G-Score:" << tentativeGScore;
+        for (const Position& neighbor : getNeighborPositions(current)) {
+            double tentativeGScore = gScore[current] + 1; // Assuming a constant cost of 1 for each move
 
             if (gScore.find(neighbor) == gScore.end() || tentativeGScore < gScore[neighbor]) {
                 cameFrom[neighbor] = current;
                 gScore[neighbor] = tentativeGScore;
-                double fScore = tentativeGScore + calculateHeuristic(neighbor.first, neighbor.second, goalX, goalY);
+                fScore[neighbor] = gScore[neighbor] + heuristicCostEstimate(neighbor, goal);
 
-                qDebug() << "Pathfinder: Updated neighbor:" << neighbor.first << neighbor.second << "F-Score:" << fScore;
-
-                openSet.push({ fScore, neighbor });
+                if (openSet.find(neighbor) == openSet.end()) {
+                    openSet.insert(neighbor);
+                }
             }
         }
     }
 
-    qDebug() << "Pathfinder: No path found!";
-    return std::vector<std::pair<int, int>>();
+    // If no path is found, return an empty vector
+    return std::vector<Position>();
 }
 
-std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y) {
-    std::vector<std::pair<int, int>> neighbors;
-    const int dx[] = { -1, 1, 0, 0 };
-    const int dy[] = { 0, 0, -1, 1 };
+std::vector<Position> Pathfinder::reconstructPath(std::map<Position, Position>& cameFrom, Position current) {
+    std::vector<Position> totalPath = { current };
 
-    for (int i = 0; i < 4; ++i) {
-        int newX = x + dx[i];
-        int newY = y + dy[i];
-        if (newX >= 0 && newX < rows && newY >= 0 && newY < cols && grid[newX][newY] != 1) {
-            if (std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(newX, newY)) == dynamicObstacles.end()) {
-                neighbors.push_back({ newX, newY });
-            }
+    while (cameFrom.find(current) != cameFrom.end()) {
+        current = cameFrom[current];
+        totalPath.insert(totalPath.begin(), current);
+    }
+
+    return totalPath;
+}
+
+double Pathfinder::heuristicCostEstimate(const Position& start, const Position& goal) {
+    // Manhattan distance heuristic
+    return std::abs(start.x - goal.x) + std::abs(start.y - goal.y);
+}
+
+std::vector<Position> Pathfinder::getNeighborPositions(const Position& current) {
+    std::vector<Position> neighbors;
+
+    // Define the possible moves (up, down, left, right)
+    std::vector<std::pair<int, int>> moves = { {0, 1}, {0, -1}, {1, 0}, {-1, 0} };
+
+    for (const auto& move : moves) {
+        Position neighbor(current.x + move.first, current.y + move.second);
+        // Check if the neighbor position is valid (within the game field)
+        if (isValidPosition(neighbor)) {
+            neighbors.push_back(neighbor);
         }
     }
 
     return neighbors;
 }
 
-std::pair<int, int> Pathfinder::getRandomFreePosition() {
-    std::vector<std::pair<int, int>> freePositions;
-    for (int x = 0; x < cols; ++x) {
-        for (int y = 0; y < rows; ++y) {
-            if (grid[y][x] != 1 && std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(x, y)) == dynamicObstacles.end()) {
-                freePositions.push_back({ x, y });
-            }
-        }
+bool Pathfinder::isValidPosition(const Position& position) {
+    // Check if the position is within the blue team area
+    if (position.x >= 5 && position.x <= 405 && position.y >= 10 && position.y <= 590) {
+        return true;
     }
-    if (!freePositions.empty()) {
-        int randomIndex = std::rand() % freePositions.size();
-        return freePositions[randomIndex];
+
+    // Check if the position is within the red team area
+    if (position.x >= 410 && position.x <= 800 && position.y >= 10 && position.y <= 590) {
+        return true;
     }
-    return { -1, -1 };
+
+    return false;
 }
