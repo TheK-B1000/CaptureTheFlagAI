@@ -1,28 +1,29 @@
 #ifndef FLAGMANAGER_H
 #define FLAGMANAGER_H
 
-#include "GameField.h"
-#include "Agent.h"
-#include <unordered_map>
+#include <QObject>
+#include <QPoint>
 
-class GameField;
+class FlagManager : public QObject
+{
+    Q_OBJECT
 
-class FlagManager {
 public:
-    FlagManager(GameField& gameField);
+    explicit FlagManager(QObject* parent = nullptr);
 
-    void attemptFlagGrab(Agent& agent);
-    void update();
-    bool isFlagSuccessfullyReturned(const Agent& agent);
-    void handleTaggedAgent(Agent& agent);
-    void resetFlag(int teamId);
+    bool checkFlagGrabRequest(int agentId, const QPoint& requestorPosition, bool isRequestorTagged);
+    void returnFlag(bool isBlueTeam);
+
+signals:
+    void flagGrabbed(int agentId, bool isBlueTeam);
+    void flagReturned(bool isBlueTeam);
 
 private:
-    GameField& gameField;
-    std::unordered_map<int, bool> flagStatus;
-    std::unordered_map<int, QPointF> flagPositions;
-
-    bool checkIfAgentInZone(const QPointF& agentPos, const QPointF& zoneCenter, qreal zoneRadius);
+    QPoint blueFlagPosition;
+    QPoint redFlagPosition;
+    bool blueFlagGrabbed;
+    bool redFlagGrabbed;
 };
 
-#endif
+#endif 
+

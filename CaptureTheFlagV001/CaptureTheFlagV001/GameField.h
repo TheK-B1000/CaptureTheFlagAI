@@ -4,30 +4,28 @@
 #include <QGraphicsView>
 #include <QGraphicsScene>
 #include <QGraphicsItem>
+#include <QGraphicsTextItem>
 #include <QTimer>
+#include <vector>
+#include <QPointF>
 #include "Agent.h"
 #include "Pathfinder.h"
 #include "TagManager.h"
 #include "FlagManager.h"
-#include "GameManager.h"
-
+#include "GameManager.h" 
 class GameField : public QGraphicsView {
     Q_OBJECT
 
 public:
-    GameField(QWidget* parent = nullptr);
-    ~GameField();
+    explicit GameField(QWidget* parent = nullptr);
+    virtual ~GameField();
 
-    static double getDistance(const QPointF& point1, const QPointF& point2);
+    double getDistance(const QPointF& point1, const QPointF& point2) const;
     bool isInHomeZone(const QPointF& position, int teamId) const;
-    static double getDistance(const Position& point1, const Position& point2);
-    bool isInHomeZone(const Position& position, int teamId) const;
-
     std::vector<Agent*> getTeamAgents(int teamId) const;
-
+    bool isWithinBounds(const QPoint& position) const;
     const std::vector<Agent*>& getBlueAgents() const;
     const std::vector<Agent*>& getRedAgents() const;
-
 
 private slots:
     void updateAgents();
@@ -42,12 +40,11 @@ private:
     QGraphicsTextItem* redScoreTextItem;
     TagManager* tagManager;
     FlagManager* flagManager;
-    GameManager* gameManager;
-    Position getHomeZoneCenter(int teamId) const;
+    GameManager* gameManager; 
+    QPointF getHomeZoneCenter(int teamId) const;
     qreal getHomeZoneRadius(int teamId) const;
-
     void setupScene();
     void stopGame();
 };
 
-#endif
+#endif 

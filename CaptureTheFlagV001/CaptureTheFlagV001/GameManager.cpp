@@ -1,29 +1,21 @@
-// GameManager.cpp
-
 #include "GameManager.h"
+#include "GameField.h" 
+
 #include <iostream>
 
-GameManager::GameManager(GameField& gameField)
-    : gameField(gameField), gameRunning(false),
-    flagManager(gameField),
-    tagManager(gameField, flagManager) {
-    // Initialize agents and other necessary game components here
-    // Example: Create agents for each team
-    agents.emplace_back(0, 0, QPointF(50, 300)); // Blue team agent
-    agents.emplace_back(1, 1, QPointF(750, 300)); // Red team agent
-
-
-}
-
+GameManager::GameManager(GameField& gameField, QObject* parent)
+    : QObject(parent),
+    gameField(gameField),
+    gameRunning(false) {}
 
 void GameManager::startGame() {
     gameRunning = true;
-    resetGameElements();
     initializeScores();
 }
 
 void GameManager::endGame() {
     gameRunning = false;
+
     // Process the end of the game, such as determining the winner
     int winningTeam = -1;
     int highestScore = 0;
@@ -33,6 +25,7 @@ void GameManager::endGame() {
             winningTeam = teamId;
         }
     }
+
     if (winningTeam != -1) {
         std::cout << "Team " << winningTeam << " wins with a score of " << highestScore << "!" << std::endl;
     }
@@ -44,33 +37,16 @@ void GameManager::endGame() {
 void GameManager::updateGame() {
     if (!gameRunning) return;
 
-    // Update the game state for this tick
-    for (Agent& agent : agents) {
-        agent.update();
-
-        // Handle interactions with flags and tagging
-        flagManager.attemptFlagGrab(agent);
-        if (flagManager.isFlagSuccessfullyReturned(agent)) {
-            scores[agent.getTeam()]++; // Increment score for the agent's team
-        }
-    }
-
-    // Create a temporary vector of Agent* pointers
     std::vector<Agent*> agentPointers;
     for (Agent& agent : agents) {
         agentPointers.push_back(&agent);
     }
-
-    // Update managers
-    tagManager.checkTags(agentPointers);
-    flagManager.update();
 
     // Check if game should end
     if (shouldEndGame()) {
         endGame();
     }
 }
-
 
 void GameManager::initializeScores() {
     // Initialize scores for each team
@@ -80,8 +56,7 @@ void GameManager::initializeScores() {
 }
 
 bool GameManager::shouldEndGame() {
-    // Determine if game conditions indicate the end of the game
-    // Example: End the game if any team reaches a score of 3
+
     for (const auto& [teamId, score] : scores) {
         if (score >= 3) {
             return true;
@@ -91,5 +66,15 @@ bool GameManager::shouldEndGame() {
 }
 
 void GameManager::updateAgents() {
+    // Implement this function if needed
+}
 
+const std::vector<Agent*>& GameManager::getBlueAgents() const {
+    std::vector<Agent*> blueAgents;
+    return blueAgents;
+}
+
+const std::vector<Agent*>& GameManager::getRedAgents() const {
+    std::vector<Agent*> redAgents;
+    return redAgents;
 }

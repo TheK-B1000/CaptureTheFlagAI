@@ -1,24 +1,24 @@
 #ifndef TAGMANAGER_H
 #define TAGMANAGER_H
 
-#include "GameField.h" 
-#include "Agent.h"
-#include "FlagManager.h"
-#include <vector>
+#include <QObject>
+#include <QPoint>
 
-class TagManager {
+class TagManager : public QObject
+{
+    Q_OBJECT
+
 public:
-    TagManager(GameField& gameField, FlagManager& flagManager);
-    void checkTags(const std::vector<Agent*>& agents);
+    explicit TagManager(QObject* parent = nullptr);
+
+    bool checkTagRequest(int taggerId, int targetId, const QPoint& taggerPosition, const QPoint& targetPosition);
+
+signals:
+    void agentTagged(int agentId);
 
 private:
-    GameField& gameField;
-    FlagManager& flagManager;
-    bool canTag(const Agent& tagger, const Agent& target) const;
-    void applyTag(Agent& tagger, Agent& target);
-
-    static constexpr double TAG_RANGE = 10.0;
-    static constexpr double TAG_COOLDOWN = 30.0;
+    int cooldown;
 };
 
-#endif
+#endif 
+

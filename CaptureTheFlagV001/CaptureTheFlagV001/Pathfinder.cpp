@@ -1,97 +1,139 @@
-// Pathfinder.cpp
-
 #include "Pathfinder.h"
-#include <unordered_set>
-#include <algorithm>
+#include "GameField.h"
+#include <QQueue>
+#include <QSet>
+#include <cmath>
 
-Pathfinder::Pathfinder() {}
+struct Node {
+    QPoint position;
+    Node* parent;
+    int g;
+    int h;
+    int f;
 
-std::vector<Position> Pathfinder::findPath(const Position& start, const Position& goal) {
-    std::unordered_set<Position, PositionHash> openSet;
-    openSet.insert(start);
+    Node(const QPoint& pos, Node* parent = nullptr)
+        : position(pos), parent(parent), g(0), h(0), f(0) {}
+};
 
-    std::map<Position, Position> cameFrom;
+Pathfinder::Pathfinder(GameField& gameField, QObject* parent)
+    : QObject(parent), gameField(gameField)
+{
+}
 
-    std::map<Position, double> gScore;
-    gScore[start] = 0;
+QList<QPoint> Pathfinder::findPath(const QPoint& start, const QPoint& end)
+{
+    QList<QPoint> path;
+    QSet<QPoint> closedSet;
+    QQueue<Node*> openSet;
 
-    std::map<Position, double> fScore;
-    fScore[start] = heuristicCostEstimate(start, goal);
+    Node* startNode = new Node(start);
+    openSet.enqueue(startNode);
 
-    while (!openSet.empty()) {
-        Position current = *std::min_element(openSet.begin(), openSet.end(),
-            [&](const Position& a, const Position& b) {
-                return fScore[a] < fScore[b];
-            });
+    while (!openSet.isEmpty()) {
+        Node* currentNode = openSet.dequeue();
+        closedSet.insert(currentNode->position);
 
-        if (current == goal) {
-            return reconstructPath(cameFrom, current);
+        if (currentNode->position == end) {
+            // Reconstruct the path
+            while (currentNode != nullptr) {
+                path.prepend(currentNode->position);
+                currentNode = currentNode->parent;
+            }
+            break;
         }
 
-        openSet.erase(current);
+        QList<QPoint> neighbors = getNeighbors(currentNode->position);
+        for (const QPoint& neighbor : neighbors) {
+            if (closedSet.contains(neighbor))
+                continue;
 
-        for (const Position& neighbor : getNeighborPositions(current)) {
-            double tentativeGScore = gScore[current] + 1; // Assuming a constant cost of 1 for each move
+            int tentativeG = currentNode->g + 1;
+            bool tentativeIsBetter = false;
 
-            if (gScore.find(neighbor) == gScore.end() || tentativeGScore < gScore[neighbor]) {
-                cameFrom[neighbor] = current;
-                gScore[neighbor] = tentativeGScore;
-                fScore[neighbor] = gScore[neighbor] + heuristicCostEstimate(neighbor, goal);
-
-                if (openSet.find(neighbor) == openSet.end()) {
-                    openSet.insert(neighbor);
+            Node* neighborNode = nullptr;
+            for (Node* node : openSet) {
+                if (node->position == neighbor) {
+                    neighborNode = node;
+                    break;
                 }
+            }
+
+            if (neighborNode == nullptr) {
+                neighborNode = new Node(neighbor, currentNode);
+                tentativeIsBetter = true;
+            }
+            else if (tentativeG < neighborNode->g) {
+                tentativeIsBetter = true;
+            }
+
+            if (tentativeIsBetter) {
+                neighborNode->parent = currentNode;
+                neighborNode->g = tentativeG;
+                neighborNode->h = heuristic(neighbor, end);
+                neighborNode->f = neighborNode->g + neighborNode->h;
+
+                if (!openSet.contains(neighborNode))
+                    openSet.enqueue(neighborNode);
             }
         }
     }
 
-    // If no path is found, return an empty vector
-    return std::vector<Position>();
+    // Clean up allocated memory
+    while (!openSet.isEmpty())
+        delete openSet.dequeue();
+
+    return path;
 }
 
-std::vector<Position> Pathfinder::reconstructPath(std::map<Position, Position>& cameFrom, Position current) {
-    std::vector<Position> totalPath = { current };
+QList<QPoint> Pathfinder::getNeighbors(const QPoint& position)
+{
+    QList<QPoint> neighbors;
 
-    while (cameFrom.find(current) != cameFrom.end()) {
-        current = cameFrom[current];
-        totalPath.insert(totalPath.begin(), current);
-    }
+    QList<QPoint> directions = {
+        QPoint(0, -1),  // Up
+        QPoint(0, 1),   // Down
+        QPoint(-1, 0),  // Left
+        QPoint(1, 0)    // Right
+    };
 
-    return totalPath;
-}
-
-double Pathfinder::heuristicCostEstimate(const Position& start, const Position& goal) {
-    // Manhattan distance heuristic
-    return std::abs(start.x - goal.x) + std::abs(start.y - goal.y);
-}
-
-std::vector<Position> Pathfinder::getNeighborPositions(const Position& current) {
-    std::vector<Position> neighbors;
-
-    // Define the possible moves (up, down, left, right)
-    std::vector<std::pair<int, int>> moves = { {0, 1}, {0, -1}, {1, 0}, {-1, 0} };
-
-    for (const auto& move : moves) {
-        Position neighbor(current.x + move.first, current.y + move.second);
-        // Check if the neighbor position is valid (within the game field)
-        if (isValidPosition(neighbor)) {
-            neighbors.push_back(neighbor);
-        }
+    for (const QPoint& direction : directions) {
+        QPoint neighbor = position + direction;
+        if (isValidPosition(neighbor))
+            neighbors.append(neighbor);
     }
 
     return neighbors;
 }
 
-bool Pathfinder::isValidPosition(const Position& position) {
-    // Check if the position is within the blue team area
-    if (position.x >= 5 && position.x <= 405 && position.y >= 10 && position.y <= 590) {
-        return true;
+bool Pathfinder::isValidPosition(const QPoint& position)
+{
+    // Check if the position is within the game field bounds
+    if (!gameField.isWithinBounds(position))
+        return false;
+
+    // Check if the position is occupied by an obstacle
+    if (isObstacle(position))
+        return false;
+
+    // Check if the position is occupied by another agent
+    for (const Agent* agent : gameField.getBlueAgents()) {
+        if (agent->getPosition() == position)
+            return false;
     }
 
-    // Check if the position is within the red team area
-    if (position.x >= 410 && position.x <= 800 && position.y >= 10 && position.y <= 590) {
-        return true;
+    for (const Agent* agent : gameField.getRedAgents()) {
+        if (agent->getPosition() == position)
+            return false;
     }
 
+    return true;
+}
+
+bool Pathfinder::isObstacle(const QPoint& position) const {
     return false;
+}
+
+int Pathfinder::heuristic(const QPoint& position, const QPoint& end)
+{
+    return std::abs(position.x() - end.x()) + std::abs(position.y() - end.y());
 }

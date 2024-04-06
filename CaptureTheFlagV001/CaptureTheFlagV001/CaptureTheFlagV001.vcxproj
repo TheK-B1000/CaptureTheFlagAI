@@ -73,13 +73,11 @@
     <QtMoc Include="GameField.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Position.h" />
-    <ClInclude Include="PositionHash.h" />
-    <ClInclude Include="TagManager.h" />
+    <QtMoc Include="TagManager.h" />
     <QtMoc Include="Agent.h" />
-    <ClInclude Include="FlagManager.h" />
-    <ClInclude Include="GameManager.h" />
-    <ClInclude Include="Pathfinder.h" />
+    <QtMoc Include="FlagManager.h" />
+    <QtMoc Include="GameManager.h" />
+    <QtMoc Include="Pathfinder.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

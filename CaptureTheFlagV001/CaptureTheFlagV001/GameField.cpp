@@ -27,10 +27,13 @@ GameField::GameField(QWidget* parent)
     gameManager = new GameManager(*this);
 
     // Set up the tag manager
-    tagManager = new TagManager(*this, *flagManager);
+    tagManager = new TagManager(this);
 
     // Set up the flag manager
-    flagManager = new FlagManager(*this);
+    flagManager = new FlagManager(this);
+
+    // Set up the pathfinder
+    pathfinder = new Pathfinder(*this);
 
     // Set up the game timer
     QTimer* gameTimer = new QTimer(this);
@@ -47,12 +50,12 @@ GameField::~GameField() {
     delete gameManager;
 }
 
-double GameField::getDistance(const Position& point1, const Position& point2) {
-    return std::sqrt(std::pow(point1.x - point2.x, 2) + std::pow(point1.y - point2.y, 2));
+double getDistance(const QPointF& point1, const QPointF& point2) {
+    return std::sqrt(std::pow(point1.x() - point2.x(), 2) + std::pow(point1.y() - point2.y(), 2));
 }
 
-bool GameField::isInHomeZone(const Position& position, int teamId) const {
-    Position homeCenter = getHomeZoneCenter(teamId);
+bool GameField::isInHomeZone(const QPointF& position, int teamId) const {
+    QPointF homeCenter = getHomeZoneCenter(teamId);
     qreal homeRadius = getHomeZoneRadius(teamId);
     return getDistance(position, homeCenter) <= homeRadius;
 }
@@ -70,25 +73,23 @@ std::vector<Agent*> GameField::getTeamAgents(int teamId) const {
     return std::vector<Agent*>();
 }
 
-Position GameField::getHomeZoneCenter(int teamId) const {
+QPointF GameField::getHomeZoneCenter(int teamId) const {
     if (teamId == 0) {
-        return Position(40 + 80 / 2, 260 + 80 / 2); // Center of blue zone
+        return QPointF(200, 300); // Center of blue zone
     }
     else {
-        return Position(680 + 80 / 2, 260 + 80 / 2); // Center of red zone
+        return QPointF(600, 300); // Center of red zone
     }
 }
 
 qreal GameField::getHomeZoneRadius(int teamId) const {
     Q_UNUSED(teamId); // Suppress unused parameter warning as radius is same for both
-    return 80 / 2; // Radius of the circular zones
+    return 30; // Radius of the circular zones
 }
 
 void GameField::updateAgents() {
     // Update agent positions and behavior
-    gameManager->updateAgents();
-    tagManager->checkTags(gameManager->getAgents());
-    flagManager->update();
+    gameManager->updateGame();
 }
 
 void GameField::handleGameTimerTimeout() {
@@ -129,7 +130,6 @@ void GameField::stopGame() {
     gameOverTextItem->setFont(QFont("Arial", 24, QFont::Bold));
     gameOverTextItem->setPlainText("Game Over");
     scene->addItem(gameOverTextItem);
-
 }
 
 void GameField::setupScene() {
@@ -140,32 +140,32 @@ void GameField::setupScene() {
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     // Add team areas
-    QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
+    QGraphicsRectItem* blueArea = new QGraphicsRectItem(10, 10, 380, 580);
     blueArea->setPen(QPen(Qt::blue, 2));
     scene->addItem(blueArea);
 
-    QGraphicsRectItem* redArea = new QGraphicsRectItem(410, 10, 390, 580);
+    QGraphicsRectItem* redArea = new QGraphicsRectItem(410, 10, 380, 580);
     redArea->setPen(QPen(Qt::red, 2));
     scene->addItem(redArea);
 
     // Add flags
-    QGraphicsEllipseItem* blueFlag = new QGraphicsEllipseItem(70, 290, 20, 20);
+    QGraphicsEllipseItem* blueFlag = new QGraphicsEllipseItem(190, 290, 20, 20);
     blueFlag->setBrush(Qt::blue);
     scene->addItem(blueFlag);
 
-    QGraphicsEllipseItem* redFlag = new QGraphicsEllipseItem(710, 290, 20, 20);
+    QGraphicsEllipseItem* redFlag = new QGraphicsEllipseItem(590, 290, 20, 20);
     redFlag->setBrush(Qt::red);
     scene->addItem(redFlag);
 
     // Add team zones (circular areas around flags)
-    QGraphicsEllipseItem* blueZone = new QGraphicsEllipseItem(40, 260, 80, 80);
+    QGraphicsEllipseItem* blueZone = new QGraphicsEllipseItem(170, 270, 60, 60);
     QPen bluePen(Qt::blue);
     bluePen.setWidth(3);
     blueZone->setPen(bluePen);
     blueZone->setBrush(Qt::NoBrush);
     scene->addItem(blueZone);
 
-    QGraphicsEllipseItem* redZone = new QGraphicsEllipseItem(680, 260, 80, 80);
+    QGraphicsEllipseItem* redZone = new QGraphicsEllipseItem(570, 270, 60, 60);
     QPen redPen(Qt::red);
     redPen.setWidth(3);
     redZone->setPen(redPen);
@@ -187,7 +187,6 @@ void GameField::setupScene() {
     redScoreTextItem->setPlainText("Red Score: 0");
     scene->addItem(redScoreTextItem);
 
-    // Add agents
     for (Agent* agent : gameManager->getBlueAgents()) {
         QGraphicsPolygonItem* blueAgent = new QGraphicsPolygonItem();
         QPolygon blueTriangle;
@@ -211,4 +210,16 @@ void GameField::setupScene() {
         redAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
         scene->addItem(redAgent);
     }
+}
+
+bool GameField::isWithinBounds(const QPoint& position) const {
+    return sceneRect().contains(position);
+}
+
+const std::vector<Agent*>& GameField::getBlueAgents() const {
+    return gameManager->getBlueAgents();
+}
+
+const std::vector<Agent*>& GameField::getRedAgents() const {
+    return gameManager->getRedAgents();
 }
