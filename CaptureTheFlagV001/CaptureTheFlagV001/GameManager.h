@@ -1,6 +1,5 @@
 #pragma once
 
-#include "GameField.h"
 #include "Agent.h"
 #include "FlagManager.h"
 #include "TagManager.h"
@@ -9,11 +8,13 @@
 #include <unordered_map>
 #include <QObject>
 
+class GameField;
+
 class GameManager : public QObject {
     Q_OBJECT
 
 public:
-    GameManager(GameField& gameField, QObject* parent = nullptr);
+    GameManager(GameField* gameField, const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents, QObject* parent = nullptr);
 
     void startGame();
     void endGame();
@@ -33,4 +34,6 @@ private:
     FlagManager flagManager;
     TagManager tagManager;
     std::unordered_map<int, int> scores; 
+    std::vector<Agent*> blueAgents;
+    std::vector<Agent*> redAgents;
 };

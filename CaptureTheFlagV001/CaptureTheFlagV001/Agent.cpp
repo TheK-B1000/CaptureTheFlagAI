@@ -1,9 +1,9 @@
 #include "Agent.h"
 
 Agent::Agent(int id, QObject* parent)
-    : QObject(parent), id(id), tagged(false)
-{
+    : QObject(parent), id(id), tagged(false) {
 }
+
 
 void Agent::move(const QPoint& newPosition)
 {
@@ -21,6 +21,14 @@ void Agent::attemptFlagGrab()
     emit flagGrabAttempted(id);
 }
 
+int Agent::getX() const {
+    return position.x();
+}
+
+int Agent::getY() const {
+    return position.y();
+}
+
 int Agent::getId() const
 {
     return id;
@@ -29,6 +37,11 @@ int Agent::getId() const
 QPoint Agent::getPosition() const
 {
     return position;
+}
+
+void Agent::setPosition(const QPoint& position)
+{
+    this->position = position;
 }
 
 bool Agent::isTagged() const

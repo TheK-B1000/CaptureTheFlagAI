@@ -12,7 +12,9 @@
 #include "Pathfinder.h"
 #include "TagManager.h"
 #include "FlagManager.h"
-#include "GameManager.h" 
+
+class GameManager;
+
 class GameField : public QGraphicsView {
     Q_OBJECT
 

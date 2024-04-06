@@ -14,7 +14,6 @@ public:
     void move(const QPoint& newPosition);
     void attemptTag(int targetId);
     void attemptFlagGrab();
-
     int getId() const;
     QPoint getPosition() const;
     bool isTagged() const;
@@ -22,6 +21,7 @@ public:
     int getX() const;
     int getY() const;
 
+    void setPosition(const QPoint& position);
 
 signals:
     void moved(int agentId, const QPoint& newPosition);
@@ -34,6 +34,4 @@ private:
     bool tagged;
 };
 
-#endif 
-
-
+#endif

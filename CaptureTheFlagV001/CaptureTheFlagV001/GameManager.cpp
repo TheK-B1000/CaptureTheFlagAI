@@ -3,10 +3,10 @@
 
 #include <iostream>
 
-GameManager::GameManager(GameField& gameField, QObject* parent)
-    : QObject(parent),
-    gameField(gameField),
-    gameRunning(false) {}
+GameManager::GameManager(GameField* gameField, const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents, QObject* parent)
+    : QObject(parent), gameField(*gameField), gameRunning(false),
+    flagManager(this), tagManager(this), blueAgents(blueAgents), redAgents(redAgents) {
+}
 
 void GameManager::startGame() {
     gameRunning = true;
@@ -70,11 +70,9 @@ void GameManager::updateAgents() {
 }
 
 const std::vector<Agent*>& GameManager::getBlueAgents() const {
-    std::vector<Agent*> blueAgents;
     return blueAgents;
 }
 
 const std::vector<Agent*>& GameManager::getRedAgents() const {
-    std::vector<Agent*> redAgents;
     return redAgents;
 }

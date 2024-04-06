@@ -20,11 +20,27 @@ GameField::GameField(QWidget* parent)
     tagManager(nullptr),
     flagManager(nullptr),
     gameManager(nullptr) {
-    // Set up the scene
-    setupScene();
+
+    std::vector<Agent*> blueAgents;
+    std::vector<Agent*> redAgents;
+
+    // Create and add blue agents
+    for (int i = 0; i < 5; ++i) {
+        Agent* blueAgent = new Agent(i);
+        blueAgent->setPosition(QPoint(50 + i * 50, 100)); // Set initial position
+        blueAgents.push_back(blueAgent);
+    }
+
+    // Create and add red agents
+    for (int i = 0; i < 5; ++i) {
+        Agent* redAgent = new Agent(i + 5);
+        redAgent->setPosition(QPoint(50 + i * 50, 500)); // Set initial position
+        redAgents.push_back(redAgent);
+    }
 
     // Set up the game manager
-    gameManager = new GameManager(*this);
+    gameManager = new GameManager(this, blueAgents, redAgents);
+
 
     // Set up the tag manager
     tagManager = new TagManager(this);
@@ -39,6 +55,9 @@ GameField::GameField(QWidget* parent)
     QTimer* gameTimer = new QTimer(this);
     connect(gameTimer, &QTimer::timeout, this, &GameField::handleGameTimerTimeout);
     gameTimer->start(1000); // Update every second (adjust as needed)
+
+    // Set up the scene
+    setupScene();
 }
 
 GameField::~GameField() {
@@ -50,7 +69,7 @@ GameField::~GameField() {
     delete gameManager;
 }
 
-double getDistance(const QPointF& point1, const QPointF& point2) {
+double GameField::getDistance(const QPointF& point1, const QPointF& point2) const {
     return std::sqrt(std::pow(point1.x() - point2.x(), 2) + std::pow(point1.y() - point2.y(), 2));
 }
 
