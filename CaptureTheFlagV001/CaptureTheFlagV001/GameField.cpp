@@ -10,15 +10,16 @@
 #include "TagManager.h"
 #include "FlagManager.h"
 #include "GameManager.h"
+#include "Agent.h"
 
 GameField::GameField(QWidget* parent)
     : QGraphicsView(parent),
-    pathfinder(nullptr),
+    pathfinder(new Pathfinder(*this)),
     cellSize(20),
     blueScoreTextItem(nullptr),
     redScoreTextItem(nullptr),
-    tagManager(nullptr),
-    flagManager(nullptr),
+    tagManager(new TagManager(this)),
+    flagManager(new FlagManager(this)),
     gameManager(nullptr) {
 
     std::vector<Agent*> blueAgents;
@@ -26,30 +27,24 @@ GameField::GameField(QWidget* parent)
 
     // Create and add blue agents
     for (int i = 0; i < 5; ++i) {
-        Agent* blueAgent = new Agent(i);
+        Agent* blueAgent = new Agent(i, this);
         blueAgent->setPosition(QPoint(50 + i * 50, 100)); // Set initial position
+        connect(blueAgent, &Agent::flagGrabAttempted, this, &GameField::handleFlagGrabAttempt);
+        connect(blueAgent, &Agent::tagAttempted, this, &GameField::handleTagAttempt);
         blueAgents.push_back(blueAgent);
     }
 
     // Create and add red agents
     for (int i = 0; i < 5; ++i) {
-        Agent* redAgent = new Agent(i + 5);
+        Agent* redAgent = new Agent(i + 5, this);
         redAgent->setPosition(QPoint(50 + i * 50, 500)); // Set initial position
+        connect(redAgent, &Agent::flagGrabAttempted, this, &GameField::handleFlagGrabAttempt);
+        connect(redAgent, &Agent::tagAttempted, this, &GameField::handleTagAttempt);
         redAgents.push_back(redAgent);
     }
 
     // Set up the game manager
     gameManager = new GameManager(this, blueAgents, redAgents);
-
-
-    // Set up the tag manager
-    tagManager = new TagManager(this);
-
-    // Set up the flag manager
-    flagManager = new FlagManager(this);
-
-    // Set up the pathfinder
-    pathfinder = new Pathfinder(*this);
 
     // Set up the game timer
     QTimer* gameTimer = new QTimer(this);
@@ -58,6 +53,11 @@ GameField::GameField(QWidget* parent)
 
     // Set up the scene
     setupScene();
+
+    // Connect signals from FlagManager and TagManager
+    connect(flagManager, &FlagManager::flagGrabbed, this, &GameField::handleFlagCapture);
+    connect(flagManager, &FlagManager::flagReturned, this, &GameField::handleFlagReturned);
+    connect(tagManager, &TagManager::agentTagged, this, &GameField::handleAgentTagged);
 }
 
 GameField::~GameField() {
@@ -67,6 +67,14 @@ GameField::~GameField() {
     delete tagManager;
     delete flagManager;
     delete gameManager;
+
+    // Delete agents
+    for (Agent* agent : blueAgents) {
+        delete agent;
+    }
+    for (Agent* agent : redAgents) {
+        delete agent;
+    }
 }
 
 double GameField::getDistance(const QPointF& point1, const QPointF& point2) const {
@@ -79,17 +87,47 @@ bool GameField::isInHomeZone(const QPointF& position, int teamId) const {
     return getDistance(position, homeCenter) <= homeRadius;
 }
 
+bool GameField::isInEnemyFlagZone(const QPoint& position, int teamId) const {
+    int enemyTeamId = (teamId == 0) ? 1 : 0;
+    QPointF enemyFlagPosition = flagManager->getFlagPosition(enemyTeamId == 0);
+    qreal flagZoneRadius = 30; // Adjust the flag zone radius as needed
+    return getDistance(position, enemyFlagPosition) <= flagZoneRadius;
+}
+
+bool GameField::canTag(const Agent* tagger, const Agent* target) const {
+    QPoint taggerPosition = tagger->getPosition();
+    QPoint targetPosition = target->getPosition();
+    qreal tagDistance = 20; // Adjust the tag distance as needed
+    return getDistance(taggerPosition, targetPosition) <= tagDistance;
+}
+
 std::vector<Agent*> GameField::getTeamAgents(int teamId) const {
-    // Retrieve the agents from the GameManager
     if (teamId == 0) {
-        return gameManager->getBlueAgents();
+        return blueAgents;
     }
     else if (teamId == 1) {
-        return gameManager->getRedAgents();
+        return redAgents;
+    }
+    return std::vector<Agent*>();
+}
+
+std::vector<Agent*> GameField::getOpponentAgents(const Agent* agent) const {
+    int agentId = agent->getId();
+    std::vector<Agent*> opponents;
+
+    for (Agent* blueAgent : blueAgents) {
+        if (blueAgent->getId() != agentId) {
+            opponents.push_back(blueAgent);
+        }
     }
 
-    // If teamId is neither 0 nor 1, return an empty vector
-    return std::vector<Agent*>();
+    for (Agent* redAgent : redAgents) {
+        if (redAgent->getId() != agentId) {
+            opponents.push_back(redAgent);
+        }
+    }
+
+    return opponents;
 }
 
 QPointF GameField::getHomeZoneCenter(int teamId) const {
@@ -116,13 +154,37 @@ void GameField::handleGameTimerTimeout() {
     // Other game logic here
 }
 
-void GameField::handleFlagCapture(const QString& team) {
+void GameField::handleFlagGrabAttempt(int agentId) {
+    Agent* agent = findAgentById(agentId);
+    if (agent) {
+        bool isTagged = agent->isTagged();
+        bool success = flagManager->checkFlagGrabRequest(agentId, agent->getPosition(), isTagged);
+        if (success) {
+            // Handle successful flag grab
+            // ...
+        }
+    }
+}
+
+void GameField::handleTagAttempt(int taggerId, int targetId) {
+    Agent* tagger = findAgentById(taggerId);
+    Agent* target = findAgentById(targetId);
+    if (tagger && target) {
+        bool success = tagManager->checkTagRequest(taggerId, targetId, tagger->getPosition(), target->getPosition());
+        if (success) {
+            // Handle successful tag
+            target->setTagged(true);
+        }
+    }
+}
+
+void GameField::handleFlagCapture(int agentId, bool isBlueTeam) {
     // Update the score text items based on the team that captured the flag
-    if (team == "Blue") {
+    if (isBlueTeam) {
         int blueScore = blueScoreTextItem->toPlainText().split(": ")[1].toInt() + 1;
         blueScoreTextItem->setPlainText(QString("Blue Score: %1").arg(blueScore));
     }
-    else if (team == "Red") {
+    else {
         int redScore = redScoreTextItem->toPlainText().split(": ")[1].toInt() + 1;
         redScoreTextItem->setPlainText(QString("Red Score: %1").arg(redScore));
     }
@@ -133,6 +195,34 @@ void GameField::handleFlagCapture(const QString& team) {
         redScoreTextItem->toPlainText().split(": ")[1].toInt() >= maxScore) {
         stopGame();
     }
+}
+
+void GameField::handleFlagReturned(bool isBlueTeam) {
+    // Reset the flag state for the corresponding team
+    flagManager->returnFlag(isBlueTeam);
+}
+
+void GameField::handleAgentTagged(int agentId) {
+    Agent* agent = findAgentById(agentId);
+    if (agent) {
+        agent->setTagged(true);
+    }
+}
+
+Agent* GameField::findAgentById(int agentId) {
+    for (Agent* agent : blueAgents) {
+        if (agent->getId() == agentId) {
+            return agent;
+        }
+    }
+
+    for (Agent* agent : redAgents) {
+        if (agent->getId() == agentId) {
+            return agent;
+        }
+    }
+
+    return nullptr;
 }
 
 void GameField::stopGame() {
@@ -206,7 +296,7 @@ void GameField::setupScene() {
     redScoreTextItem->setPlainText("Red Score: 0");
     scene->addItem(redScoreTextItem);
 
-    for (Agent* agent : gameManager->getBlueAgents()) {
+    for (Agent* agent : blueAgents) {
         QGraphicsPolygonItem* blueAgent = new QGraphicsPolygonItem();
         QPolygon blueTriangle;
         int x = agent->getX() * cellSize;
@@ -218,7 +308,7 @@ void GameField::setupScene() {
         scene->addItem(blueAgent);
     }
 
-    for (Agent* agent : gameManager->getRedAgents()) {
+    for (Agent* agent : redAgents) {
         QGraphicsPolygonItem* redAgent = new QGraphicsPolygonItem();
         QPolygon redTriangle;
         int x = agent->getX() * cellSize;

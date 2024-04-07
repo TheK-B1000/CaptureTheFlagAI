@@ -1,5 +1,6 @@
 #include "Pathfinder.h"
 #include "GameField.h"
+#include "Agent.h"
 #include <QQueue>
 #include <QSet>
 #include <cmath>

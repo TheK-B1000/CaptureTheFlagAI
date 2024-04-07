@@ -65,10 +65,6 @@ bool GameManager::shouldEndGame() {
     return false;
 }
 
-void GameManager::updateAgents() {
-    // Implement this function if needed
-}
-
 const std::vector<Agent*>& GameManager::getBlueAgents() const {
     return blueAgents;
 }

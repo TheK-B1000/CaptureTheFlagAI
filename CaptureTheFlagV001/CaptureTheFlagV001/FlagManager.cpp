@@ -38,3 +38,7 @@ void FlagManager::returnFlag(bool isBlueTeam)
         emit flagReturned(false);
     }
 }
+
+QPoint FlagManager::getFlagPosition(bool isBlueTeam) const {
+    return isBlueTeam ? blueFlagPosition : redFlagPosition;
+}

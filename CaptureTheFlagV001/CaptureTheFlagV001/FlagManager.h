@@ -13,6 +13,7 @@ public:
 
     bool checkFlagGrabRequest(int agentId, const QPoint& requestorPosition, bool isRequestorTagged);
     void returnFlag(bool isBlueTeam);
+    QPoint getFlagPosition(bool isBlueTeam) const;
 
 signals:
     void flagGrabbed(int agentId, bool isBlueTeam);
