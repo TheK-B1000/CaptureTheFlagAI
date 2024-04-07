@@ -19,7 +19,6 @@ class Agent : public QObject {
 
 private:
     int x, y;
-    std::string side;
     int cols, rows;
     const std::vector<std::vector<int>>& grid;
     Pathfinder* pathfinder;
@@ -37,6 +36,8 @@ private:
     int previousX, previousY;
     int stuckTimer;
     static const int stuckThreshold = 5;
+    std::string side;
+
 
 public:
     Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents);
@@ -66,9 +67,16 @@ public:
     void setEnabled(bool enabled);
     int getX() const { return x; }
     int getY() const { return y; }
+    const std::vector<Agent*>& getBlueAgents() const { return blueAgents; }
+    const std::vector<Agent*>& getRedAgents() const { return redAgents; }
     Brain* getBrain() const { return brain; }
     Memory* getMemory() const { return memory; }
     bool isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents);
+    std::string getSide() const { return side; }
+    float getTaggingDistance() const { return taggingDistance; }
+    int getCooldownTimer() const { return cooldownTimer; }
+    int getCooldownDuration() const { return cooldownDuration; }
+    void setCooldownTimer(int value) { cooldownTimer = value; }
 
 signals:
     void blueFlagCaptured();
