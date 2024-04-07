@@ -147,6 +147,37 @@ qreal GameField::getHomeZoneRadius(int teamId) const {
 void GameField::updateAgents() {
     // Update agent positions and behavior
     gameManager->updateGame();
+
+    for (Agent* agent : blueAgents) {
+        QList<QGraphicsItem*> agentItems = scene->items();
+        for (QGraphicsItem* item : agentItems) {
+            if (item->data(0).toULongLong() == reinterpret_cast<quintptr>(agent)) {
+                QGraphicsPolygonItem* agentItem = static_cast<QGraphicsPolygonItem*>(item);
+                int x = agent->getX() * cellSize;
+                int y = agent->getY() * cellSize;
+                QPolygon agentTriangle;
+                agentTriangle << QPoint(x, y) << QPoint(x - 10, y + 20) << QPoint(x + 10, y + 20);
+                agentItem->setPolygon(agentTriangle);
+                break;
+            }
+        }
+    }
+
+    // Update graphical representation of red agents
+    for (Agent* agent : redAgents) {
+        QList<QGraphicsItem*> agentItems = scene->items();
+        for (QGraphicsItem* item : agentItems) {
+            if (item->data(0).toULongLong() == reinterpret_cast<quintptr>(agent)) {
+                QGraphicsPolygonItem* agentItem = static_cast<QGraphicsPolygonItem*>(item);
+                int x = agent->getX() * cellSize;
+                int y = agent->getY() * cellSize;
+                QPolygon agentTriangle;
+                agentTriangle << QPoint(x, y) << QPoint(x - 10, y + 20) << QPoint(x + 10, y + 20);
+                agentItem->setPolygon(agentTriangle);
+                break;
+            }
+        }
+    }
 }
 
 void GameField::handleGameTimerTimeout() {
@@ -305,9 +336,10 @@ void GameField::setupScene() {
         blueAgent->setPolygon(blueTriangle);
         blueAgent->setBrush(Qt::blue);
         blueAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
-        scene->addItem(blueAgent);
+        scene->addItem(blueAgent); // Add the agent to the scene
     }
 
+    // Add red agents
     for (Agent* agent : redAgents) {
         QGraphicsPolygonItem* redAgent = new QGraphicsPolygonItem();
         QPolygon redTriangle;
@@ -317,7 +349,7 @@ void GameField::setupScene() {
         redAgent->setPolygon(redTriangle);
         redAgent->setBrush(Qt::red);
         redAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
-        scene->addItem(redAgent);
+        scene->addItem(redAgent); // Add the agent to the scene
     }
 }
 
