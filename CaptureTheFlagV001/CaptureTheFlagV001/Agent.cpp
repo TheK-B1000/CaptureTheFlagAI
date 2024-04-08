@@ -129,7 +129,7 @@ bool Agent::isOpponentCarryingFlag() const {
 float Agent::distanceToEnemyFlag() const {
     int enemyFlagX = (side == "blue") ? cols - 1 : 0;
     int enemyFlagY = rows / 2;
-    return std::hypot(enemyFlagX - x, enemyFlagY - y);
+    return std::hypot(enemyFlagX - x, enemyFlagY - y) * FIELD_WIDTH / GRID_SIZE;
 }
 
 float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const {
@@ -265,7 +265,7 @@ void Agent::tagEnemy(std::vector<Agent*>& otherAgents) {
 
     if (nearestEnemy != nullptr) {
         nearestEnemy->setIsTagged(true);
-        cooldownTimer = cooldownDuration;
+        setCooldownTimer(getCooldownDuration());
     }
 }
 
@@ -310,11 +310,40 @@ void Agent::resetFlag() {
 }
 
 bool Agent::checkInHomeZone() const {
-    int homeZoneX = (side == "blue") ? 40 : 410;
-    int homeZoneY = 10;
-    int homeZoneWidth = (side == "blue") ? 400 : 390;
-    int homeZoneHeight = 580;
-    return (x >= homeZoneX && x <= homeZoneX + homeZoneWidth && y >= homeZoneY && y <= homeZoneY + homeZoneHeight);
+    if (side == "blue") {
+        int homeZoneX = 0;
+        int homeZoneY = 0;
+        int homeZoneWidth = cols / 2;
+        int homeZoneHeight = rows;
+        return (x >= homeZoneX && x < homeZoneX + homeZoneWidth && y >= homeZoneY && y < homeZoneY + homeZoneHeight);
+    }
+    else {
+        int homeZoneX = cols / 2;
+        int homeZoneY = 0;
+        int homeZoneWidth = cols / 2;
+        int homeZoneHeight = rows;
+        return (x >= homeZoneX && x < homeZoneX + homeZoneWidth && y >= homeZoneY && y < homeZoneY + homeZoneHeight);
+    }
+}
+
+std::pair<int, int> Agent::getHomeZonePosition() const {
+    int homeX = (side == "blue") ? 0 : cols - 1;
+    int homeY = rows / 2;
+    return std::make_pair(homeX, homeY);
+}
+
+void Agent::setX(int newX) {
+    x = newX;
+}
+
+void Agent::setY(int newY) {
+    y = newY;
+}
+
+void Agent::decrementCooldownTimer() {
+    if (cooldownTimer > 0) {
+        --cooldownTimer;
+    }
 }
 
 std::pair<int, int> Agent::getDirectionToOpponent(int opponentX, int opponentY) const {

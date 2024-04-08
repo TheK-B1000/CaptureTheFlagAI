@@ -14,6 +14,9 @@ enum class AgentMode {
     Defensive
 };
 
+const int FIELD_WIDTH = 20; // Field width in meters
+const int GRID_SIZE = 100; // Grid size for discretization
+
 class Agent : public QObject {
     Q_OBJECT
 
@@ -64,9 +67,13 @@ public:
     bool isTagged() const;
     bool isCarryingFlag() const;
     void setCarryingFlag(bool carrying);
-    void setEnabled(bool enabled);
+    std::pair<int, int> getHomeZonePosition() const;
     int getX() const { return x; }
     int getY() const { return y; }
+    void setX(int newX);
+    void setY(int newY);
+    void setEnabled(bool enabled);
+    void decrementCooldownTimer();
     const std::vector<Agent*>& getBlueAgents() const { return blueAgents; }
     const std::vector<Agent*>& getRedAgents() const { return redAgents; }
     Brain* getBrain() const { return brain; }
