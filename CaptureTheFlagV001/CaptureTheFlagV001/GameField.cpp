@@ -90,7 +90,7 @@ GameField::GameField(QWidget* parent) : QGraphicsView(parent) {
     scene->addItem(timeRemainingTextItem);
 
     // Start a timer to update agents
-    int gameDuration = 600; // 10 minutes in seconds
+    int gameDuration = 300; // 10 minutes in seconds
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
