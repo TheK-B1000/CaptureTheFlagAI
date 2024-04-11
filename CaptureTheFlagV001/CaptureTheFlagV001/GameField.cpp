@@ -60,6 +60,7 @@ GameField::GameField(QWidget* parent) : QGraphicsView(parent) {
         connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
         connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
+
     // Set up the scene
     setupScene();
 
@@ -90,16 +91,131 @@ GameField::GameField(QWidget* parent) : QGraphicsView(parent) {
     scene->addItem(timeRemainingTextItem);
 
     // Start a timer to update agents
-    int gameDuration = 600; // 10 minutes in seconds
+    int gameDuration = 300; // 10 minutes in seconds
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
 
     gameTimer = new QTimer(this);
     connect(gameTimer, &QTimer::timeout, this, &GameField::handleGameTimerTimeout);
-    gameTimer->start(1000);
+    gameTimer->start(100);
 }
 
+void GameField::clearAgents() {
+    // Delete all existing agents
+    for (Agent* agent : blueAgents) {
+        delete agent->getBrain();
+        delete agent->getMemory();
+        delete agent;
+    }
+    blueAgents.clear();
+
+    for (Agent* agent : redAgents) {
+        delete agent->getBrain();
+        delete agent->getMemory();
+        delete agent;
+    }
+    redAgents.clear();
+}
+
+void GameField::setupAgents(int blueCount, int redCount, int cols) {
+    // Initialize blue agents
+    for (int i = 0; i < blueCount; i++) {
+        int x, y;
+        do {
+            x = QRandomGenerator::global()->bounded(1, 4);
+            y = QRandomGenerator::global()->bounded(1, cols - 1);
+        } while (grid[x][y] == 1 || x < 0 || x >= rows || y < 0 || y >= cols);
+        Brain* blueBrain = new Brain(); // Create a brain for each blue agent
+        Memory* blueMemory = new Memory(); // Create a memory for each blue agent
+        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, blueAgents, redAgents);
+        blueAgents.push_back(agent);
+        connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
+        connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
+    }
+
+    // Initialize red agents
+    for (int i = 0; i < redCount; i++) {
+        int x, y;
+        do {
+            x = QRandomGenerator::global()->bounded(6, 9);
+            y = QRandomGenerator::global()->bounded(1, cols - 1);
+        } while (grid[x][y] == 1 || x < 0 || x >= rows || y < 0 || y >= cols);
+        Brain* redBrain = new Brain(); // Create a brain for each red agent
+        Memory* redMemory = new Memory(); // Create a memory for each red agent
+        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, blueAgents, redAgents);
+        redAgents.push_back(agent);
+        connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+        connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
+    }
+}
+
+void GameField::runTestCase1() {
+    // Test case 1: Default game setup (4 blue agents, 4 red agents)
+}
+
+void GameField::runTestCase2(int agentCount) {
+    clearAgents();
+
+    int blueCount = agentCount / 2;
+    int redCount = agentCount - blueCount;
+
+    setupAgents(blueCount, redCount, grid[0].size()); // Pass the number of columns
+
+    setupScene(); // Set up the scene first
+    updateSceneItems(); // Update the scene items after setting up the scene
+}
+
+void GameField::runTestCase3() {
+    // Test case 3: Change the position of team zones and flags
+    QGraphicsEllipseItem* blueFlag = findFlagItem("blue");
+    QGraphicsEllipseItem* redFlag = findFlagItem("red");
+
+    if (blueFlag && redFlag) {
+        // Move the blue team zone to the top-left corner
+        QGraphicsEllipseItem* blueZone = nullptr;
+        for (QGraphicsItem* item : scene->items()) {
+            if (QGraphicsEllipseItem* ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
+                QPen pen = ellipseItem->pen();
+                if (pen.color() == Qt::blue && pen.width() == 3) {
+                    blueZone = ellipseItem;
+                    break;
+                }
+            }
+        }
+
+        if (blueZone) {
+            QRectF blueZoneRect(0, 0, 100, 100);
+            blueZone->setRect(blueZoneRect);
+
+            // Move the blue flag to the center of the new team zone position
+            QPointF blueFlagPos = blueZoneRect.center() - QPointF(10, 10);
+            blueFlag->setPos(50, 50); // Adjust the position as needed
+        }
+
+        // Move the red team zone to the bottom-right corner
+        QGraphicsEllipseItem* redZone = nullptr;
+        for (QGraphicsItem* item : scene->items()) {
+            if (QGraphicsEllipseItem* ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
+                QPen pen = ellipseItem->pen();
+                if (pen.color() == Qt::red && pen.width() == 3) {
+                    redZone = ellipseItem;
+                    break;
+                }
+            }
+        }
+
+        if (redZone) {
+            QRectF redZoneRect(700, 500, 100, 100);
+            redZone->setRect(redZoneRect);
+
+            // Move the red flag to the center of the new team zone position
+            QPointF redFlagPos = redZoneRect.center() - QPointF(10, 10);
+            redFlag->setPos(700, 500); // Adjust the position as needed
+        }
+
+    }
+}
 void GameField::handleFlagCapture(const QString& team) {
     if (team == "blue") {
         blueScore++;

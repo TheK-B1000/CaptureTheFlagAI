@@ -61,12 +61,18 @@
     <ClCompile Include="TagManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Driver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="GameField.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="Agent.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Driver.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
