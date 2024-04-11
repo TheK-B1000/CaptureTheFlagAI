@@ -66,9 +66,6 @@
     <QtMoc Include="GameField.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="Agent.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Pathfinder.h">
@@ -84,6 +81,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TagManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Agent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

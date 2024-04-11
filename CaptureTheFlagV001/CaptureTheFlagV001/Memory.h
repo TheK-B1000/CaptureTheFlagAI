@@ -17,11 +17,10 @@ struct pair_hash {
 class Memory {
 public:
     void updateOpponentInfo(int opponentX, int opponentY, bool hasFlag, std::pair<int, int> direction);
-    std::pair<bool, std::pair<int, int>> getOpponentInfo(int opponentX, int opponentY) const;
-    std::chrono::duration<double> getTimeSinceLastSeen(int opponentX, int opponentY);
-    std::pair<int, int> getLastKnownDirection(int opponentX, int opponentY);
-    std::pair<int, int> getLastKnownPosition(int opponentX, int opponentY);
-    const std::unordered_map<std::pair<int, int>, std::tuple<bool, std::pair<int, int>, std::chrono::system_clock::time_point>, pair_hash>& getOpponentInfo() const;
+    std::tuple<bool, std::pair<int, int>, std::chrono::system_clock::time_point> getOpponentInfo(int opponentX, int opponentY) const;
+    bool isAnyOpponentCarryingFlag() const;
+    std::pair<int, int> getOpponentWithFlag() const;
+    std::pair<int, int> getPredictedOpponentPosition(std::pair<int, int> opponentPosition) const;
 
 private:
     std::unordered_map<std::pair<int, int>, std::tuple<bool, std::pair<int, int>, std::chrono::system_clock::time_point>, pair_hash> opponentInfo;

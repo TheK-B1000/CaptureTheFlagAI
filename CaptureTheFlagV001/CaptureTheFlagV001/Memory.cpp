@@ -1,37 +1,41 @@
 #include "Memory.h"
+#include <chrono>
 
 void Memory::updateOpponentInfo(int opponentX, int opponentY, bool hasFlag, std::pair<int, int> direction) {
     opponentInfo[std::make_pair(opponentX, opponentY)] = std::make_tuple(hasFlag, direction, std::chrono::system_clock::now());
 }
 
-std::pair<bool, std::pair<int, int>> Memory::getOpponentInfo(int opponentX, int opponentY) const {
+std::tuple<bool, std::pair<int, int>, std::chrono::system_clock::time_point> Memory::getOpponentInfo(int opponentX, int opponentY) const {
     auto it = opponentInfo.find(std::make_pair(opponentX, opponentY));
     if (it != opponentInfo.end()) {
-        return std::make_pair(std::get<0>(it->second), std::get<1>(it->second));
+        return it->second;
     }
-    return std::make_pair(false, std::make_pair(0, 0));
+    return std::make_tuple(false, std::make_pair(0, 0), std::chrono::system_clock::time_point());
 }
 
-std::chrono::duration<double> Memory::getTimeSinceLastSeen(int opponentX, int opponentY) {
-    auto it = opponentInfo.find(std::make_pair(opponentX, opponentY));
+bool Memory::isAnyOpponentCarryingFlag() const {
+    for (const auto& entry : opponentInfo) {
+        if (std::get<0>(entry.second)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::pair<int, int> Memory::getOpponentWithFlag() const {
+    for (const auto& entry : opponentInfo) {
+        if (std::get<0>(entry.second)) {
+            return entry.first;
+        }
+    }
+    return std::make_pair(-1, -1);
+}
+
+std::pair<int, int> Memory::getPredictedOpponentPosition(std::pair<int, int> opponentPosition) const {
+    auto it = opponentInfo.find(opponentPosition);
     if (it != opponentInfo.end()) {
-        return std::chrono::system_clock::now() - std::get<2>(it->second);
+        std::pair<int, int> direction = std::get<1>(it->second);
+        return std::make_pair(opponentPosition.first + direction.first, opponentPosition.second + direction.second);
     }
-    return std::chrono::duration<double>::max();
-}
-
-std::pair<int, int> Memory::getLastKnownDirection(int opponentX, int opponentY) {
-    auto it = opponentInfo.find(std::make_pair(opponentX, opponentY));
-    if (it != opponentInfo.end()) {
-        return std::get<1>(it->second);
-    }
-    return std::make_pair(0, 0);
-}
-
-std::pair<int, int> Memory::getLastKnownPosition(int opponentX, int opponentY) {
-    return std::make_pair(opponentX, opponentY);
-}
-
-const std::unordered_map<std::pair<int, int>, std::tuple<bool, std::pair<int, int>, std::chrono::system_clock::time_point>, pair_hash>& Memory::getOpponentInfo() const {
-    return opponentInfo;
+    return opponentPosition;
 }

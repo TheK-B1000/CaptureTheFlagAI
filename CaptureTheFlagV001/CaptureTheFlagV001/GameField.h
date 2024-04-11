@@ -18,7 +18,6 @@ public:
 private slots:
     void updateAgents();
     void handleGameTimerTimeout();
-    void handleFlagCapture(const QString& team);
 
 private:
     QGraphicsScene* scene;
@@ -34,6 +33,8 @@ private:
     QGraphicsTextItem* timeRemainingTextItem;
     QGraphicsTextItem* blueScoreTextItem;
     QGraphicsTextItem* redScoreTextItem;
+    QGraphicsEllipseItem* blueFlagItem;
+    QGraphicsEllipseItem* redFlagItem;
 
     void updateAgentPositions();
     void updateAgentItemsPositions();
@@ -48,6 +49,7 @@ private:
     void setupScene();
     void stopGame();
     void declareWinner();
+    void handleFlagCapture(const QString& team);
 };
 
 #endif

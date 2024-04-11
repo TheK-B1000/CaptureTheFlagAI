@@ -23,9 +23,9 @@ BrainDecision Brain::makeDecision(bool hasFlag, bool opponentHasFlag, bool isTag
         return BrainDecision::TagEnemy;
     }
 
-    float flagCaptureScore = evaluateFlagCapture(hasFlag, distanceToFlag);
-    float flagRecoveryScore = evaluateFlagRecovery(opponentHasFlag, distanceToNearestEnemy);
-    float exploreScore = evaluateExplore(hasFlag, opponentHasFlag, inHomeZone);
+    float flagCaptureScore = hasFlag ? 1.0f : 1.0f - (distanceToFlag / 100.0f);
+    float flagRecoveryScore = opponentHasFlag ? 1.0f - (distanceToNearestEnemy / 100.0f) : 0.0f;
+    float exploreScore = hasFlag || opponentHasFlag || inHomeZone ? 0.0f : 0.5f;
 
     if (flagCaptureScore >= flagRecoveryScore && flagCaptureScore >= exploreScore) {
         return BrainDecision::CaptureFlag;
@@ -35,32 +35,5 @@ BrainDecision Brain::makeDecision(bool hasFlag, bool opponentHasFlag, bool isTag
     }
     else {
         return BrainDecision::Explore;
-    }
-}
-
-float Brain::evaluateFlagCapture(bool hasFlag, float distanceToFlag) {
-    if (hasFlag) {
-        return 1.0f;
-    }
-    else {
-        return 1.0f - (distanceToFlag / 100.0f);
-    }
-}
-
-float Brain::evaluateFlagRecovery(bool opponentHasFlag, float distanceToNearestEnemy) {
-    if (opponentHasFlag) {
-        return 1.0f - (distanceToNearestEnemy / 100.0f);
-    }
-    else {
-        return 0.0f;
-    }
-}
-
-float Brain::evaluateExplore(bool hasFlag, bool opponentHasFlag, bool inHomeZone) {
-    if (hasFlag || opponentHasFlag || inHomeZone) {
-        return 0.0f;
-    }
-    else {
-        return 0.5f;
     }
 }

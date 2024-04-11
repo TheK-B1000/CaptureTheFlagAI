@@ -19,10 +19,6 @@ private:
     bool flagCaptured;
     int score;
     float proximityThreshold;
-
-    float evaluateFlagCapture(bool hasFlag, float distanceToFlag);
-    float evaluateFlagRecovery(bool opponentHasFlag, float distanceToNearestEnemy);
-    float evaluateExplore(bool hasFlag, bool opponentHasFlag, bool inHomeZone);
 };
 
 #endif

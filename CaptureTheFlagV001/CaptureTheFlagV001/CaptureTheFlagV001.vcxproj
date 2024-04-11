@@ -75,7 +75,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TagManager.h" />
-    <QtMoc Include="Agent.h" />
+    <ClInclude Include="Agent.h" />
     <ClInclude Include="Brain.h" />
     <ClInclude Include="FlagManager.h" />
     <ClInclude Include="Memory.h" />
