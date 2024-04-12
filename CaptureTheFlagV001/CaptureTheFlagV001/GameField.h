@@ -12,7 +12,7 @@ class GameField : public QGraphicsView {
     Q_OBJECT
 
 public:
-    GameField(QWidget* parent = nullptr);
+    GameField(QWidget* parent, const std::vector<std::vector<int>>& grid);
     ~GameField();
 
     // Getter functions
@@ -24,6 +24,7 @@ public:
     Pathfinder* getPathfinder() const { return pathfinder; }
     int getTaggingDistance() const { return taggingDistance; }
     QGraphicsScene* getScene() const { return scene; }
+
     void clearAgents();
     void setupAgents(int blueCount, int redCount, int cols);
     bool isValidPosition(int x, int y);

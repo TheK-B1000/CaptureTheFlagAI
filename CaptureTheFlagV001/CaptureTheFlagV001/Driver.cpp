@@ -5,7 +5,11 @@
 #include <QInputDialog>
 
 Driver::Driver(QWidget* parent) : QMainWindow(parent) {
-    gameField = new GameField(this);
+    int rows = 10;
+    int cols = 10;
+    std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
+
+    GameField* gameField = new GameField(this, grid);
     setCentralWidget(gameField);
 
     // Create the menu bar
