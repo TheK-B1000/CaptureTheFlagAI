@@ -2,6 +2,8 @@
 #include "Agent.h"
 #include <iostream>
 
+FlagManager::FlagManager(GameField* gameField) : gameField(gameField) {}
+
 bool FlagManager::isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents) {
     for (const Agent* teammate : blueAgents) {
         if (teammate->isCarryingFlag()) {

@@ -4,6 +4,32 @@
 #include <limits>
 #include <algorithm>
 
+TagManager::TagManager(GameField* gameField) : gameField(gameField) {}
+
+void TagManager::checkTagging(std::vector<Agent*>& blueAgents, std::vector<Agent*>& redAgents) {
+    for (Agent* agent : blueAgents) {
+        if (agent->isOnEnemySide() && !agent->isTagged()) {
+            for (Agent* enemyAgent : redAgents) {
+                if (enemyAgent->checkInHomeZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent) <= agent->getTaggingDistance()) {
+                    agent->setIsTagged(true);
+                    break;
+                }
+            }
+        }
+    }
+
+    for (Agent* agent : redAgents) {
+        if (agent->isOnEnemySide() && !agent->isTagged()) {
+            for (Agent* enemyAgent : blueAgents) {
+                if (enemyAgent->checkInHomeZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent) <= agent->getTaggingDistance()) {
+                    agent->setIsTagged(true);
+                    break;
+                }
+            }
+        }
+    }
+}
+
 void TagManager::tagEnemy(Agent* agent, std::vector<Agent*>& otherAgents) {
     if (agent->isTagged() || agent->getCooldownTimer() > 0) {
         return;

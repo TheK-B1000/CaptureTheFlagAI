@@ -2,17 +2,24 @@
 #define TAGMANAGER_H
 
 #include <vector>
+#include "Agent.h"
 
-class Agent;
 class Pathfinder;
+class GameField;
 
 class TagManager {
 public:
-    static void tagEnemy(Agent* agent, std::vector<Agent*>& otherAgents);
-    static void resetFlag(Agent* agent);
-    static void handleTaggedAgent(Agent* agent, Pathfinder* pathfinder);
-    static void handleFlagCarrier(Agent* agent, Pathfinder* pathfinder);
-    static void update(std::vector<Agent*>& agents, Pathfinder* pathfinder);
+    TagManager(GameField* gameField);
+
+    void checkTagging(std::vector<Agent*>& blueAgents, std::vector<Agent*>& redAgents);
+    void update(std::vector<Agent*>& agents, Pathfinder* pathfinder);
+
+private:
+    GameField* gameField;
+    void tagEnemy(Agent* agent, std::vector<Agent*>& otherAgents);
+    void resetFlag(Agent* agent);
+    void handleTaggedAgent(Agent* agent, Pathfinder* pathfinder);
+    void handleFlagCarrier(Agent* agent, Pathfinder* pathfinder);
 };
 
 #endif

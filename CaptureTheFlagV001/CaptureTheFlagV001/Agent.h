@@ -41,11 +41,10 @@ private:
     static const int stuckThreshold = 5;
     std::string side;
 
-
 public:
     Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents);
-    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents);
-    void updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions);
+
+    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, const std::vector<Agent*>& otherAgents);
     void handleFlagInteractions();
     void handleCooldownTimer();
     bool isOpponentCarryingFlag() const;
@@ -84,12 +83,13 @@ public:
     int getCooldownTimer() const { return cooldownTimer; }
     int getCooldownDuration() const { return cooldownDuration; }
     void setCooldownTimer(int value) { cooldownTimer = value; }
+      void tagEnemy(const std::vector<Agent*>& otherAgents);
 
 signals:
-    void blueFlagCaptured();
-    void redFlagCaptured();
-    void blueFlagReset();
-    void redFlagReset();
+    void blueFlagCaptured(const QString& team);
+    void redFlagCaptured(const QString& team);
+    void blueFlagReset(const QString& team);
+    void redFlagReset(const QString& team);
 };
 
 #endif

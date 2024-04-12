@@ -9,9 +9,7 @@ Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::ve
     : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), blueAgents(blueAgents), redAgents(redAgents),
     _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true), previousX(x), previousY(y), stuckTimer(0) {}
 
-void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
-    updateMemory(otherAgentsPositions);
-
+void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, const std::vector<Agent*>& otherAgents) {
     if (!_isEnabled) {
         return;
     }
@@ -66,7 +64,7 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         stuckTimer++;
         if (stuckTimer >= stuckThreshold) {
             std::pair<int, int> targetPosition = pathfinder->getRandomFreePosition();
-            path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);            
+            path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
             stuckTimer = 0;
         }
     }
@@ -78,14 +76,6 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     previousY = y;
     handleFlagInteractions();
     handleCooldownTimer();
-}
-
-
-void Agent::updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    for (const auto& position : otherAgentsPositions) {
-        const auto& opponentInfo = memory->getOpponentInfo(position.first, position.second);
-        memory->updateOpponentInfo(position.first, position.second, std::get<0>(opponentInfo), std::get<1>(opponentInfo));
-    }
 }
 
 void Agent::handleFlagInteractions() {
@@ -245,7 +235,7 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     }
 }
 
-void Agent::tagEnemy(std::vector<Agent*>& otherAgents) {
+void Agent::tagEnemy(const std::vector<Agent*>& otherAgents) {
     if (_isTagged || cooldownTimer > 0) {
         return;
     }
@@ -298,6 +288,7 @@ bool Agent::captureFlag() {
     }
     return false;
 }
+
 void Agent::resetFlag() {
     _isCarryingFlag = false;
 

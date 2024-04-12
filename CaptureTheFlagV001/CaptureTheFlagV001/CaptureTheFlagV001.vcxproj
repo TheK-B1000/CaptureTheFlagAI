@@ -60,6 +60,7 @@
     <ClCompile Include="Agent.cpp" />
     <ClCompile Include="Brain.cpp" />
     <ClCompile Include="FlagManager.cpp" />
+    <ClCompile Include="GameManager.cpp" />
     <ClCompile Include="Memory.cpp" />
     <ClCompile Include="Pathfinder.cpp" />
     <ClCompile Include="TagManager.cpp" />
@@ -74,6 +75,7 @@
     <QtMoc Include="GameField.h" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="GameManager.h" />
     <ClInclude Include="TagManager.h" />
     <QtMoc Include="Agent.h" />
     <ClInclude Include="Brain.h" />
