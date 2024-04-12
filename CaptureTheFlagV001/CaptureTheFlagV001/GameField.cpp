@@ -426,6 +426,7 @@ void GameField::checkTagging() {
     }
 }
 
+
 QGraphicsItem* GameField::getAgentItem(Agent* agent) {
     for (QGraphicsItem* item : scene->items()) {
         if (item->data(0).toString() == QString::number(reinterpret_cast<quintptr>(agent))) {
