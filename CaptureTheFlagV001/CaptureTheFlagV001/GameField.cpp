@@ -6,9 +6,11 @@
 #include <QGraphicsItem>
 #include <QGraphicsTextItem>
 #include <QFont>
+#include "GameManager.h"
 
 GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
-    : QGraphicsView(parent), grid(grid) {
+    : QGraphicsView(parent), grid(grid), gameManager(new GameManager(cols, rows)) {
+
     setRenderHint(QPainter::Antialiasing);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -20,16 +22,18 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
     cellSize = 40;
     taggingDistance = 100; // Set the tagging distance
 
+    GameManager* gameManager = new GameManager(cols, rows);
+
     // Initialize blue agents
     for (int i = 0; i < 4; i++) {
         int x, y;
         do {
             x = QRandomGenerator::global()->bounded(0, cols); // Allow agents anywhere in the field
             y = QRandomGenerator::global()->bounded(0, rows);
-        } while (grid[x][y] == 1);
+        } while (grid[y][x] == 1);
         Brain* blueBrain = new Brain(); // Create a brain for each blue agent
         Memory* blueMemory = new Memory(); // Create a memory for each blue agent
-        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, blueAgents, redAgents);
+        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
         blueAgents.push_back(agent);
         connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
         connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
@@ -41,14 +45,16 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
         do {
             x = QRandomGenerator::global()->bounded(0, cols); // Allow agents anywhere in the field
             y = QRandomGenerator::global()->bounded(0, rows);
-        } while (grid[x][y] == 1);  
+        } while (grid[y][x] == 1);
         Brain* redBrain = new Brain(); // Create a brain for each red agent
         Memory* redMemory = new Memory(); // Create a memory for each red agent
-        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, blueAgents, redAgents);
+        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
         redAgents.push_back(agent);
         connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
         connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
+
+    setupAgents(4, 4, cols, gameManager);
 
     // Set up the scene
     setupScene();
@@ -107,17 +113,17 @@ void GameField::clearAgents() {
     redAgents.clear();
 }
 
-void GameField::setupAgents(int blueCount, int redCount, int cols) {
+void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager) {
     // Initialize blue agents
     for (int i = 0; i < blueCount; i++) {
         int x, y;
         do {
             x = QRandomGenerator::global()->bounded(1, rows / 2);
             y = QRandomGenerator::global()->bounded(1, cols - 1);
-        } while (grid[x][y] == 1);
+        } while (grid[y][x] == 1);
         Brain* blueBrain = new Brain(); // Create a brain for each blue agent
         Memory* blueMemory = new Memory(); // Create a memory for each blue agent
-        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, blueAgents, redAgents);
+        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
         blueAgents.push_back(agent);
         connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
         connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
@@ -129,10 +135,10 @@ void GameField::setupAgents(int blueCount, int redCount, int cols) {
         do {
             x = QRandomGenerator::global()->bounded(rows / 2, rows - 1);
             y = QRandomGenerator::global()->bounded(1, cols - 1);
-        } while (grid[x][y] == 1);
+        } while (grid[y][x] == 1);
         Brain* redBrain = new Brain(); // Create a brain for each red agent
         Memory* redMemory = new Memory(); // Create a memory for each red agent
-        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, blueAgents, redAgents);
+        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
         redAgents.push_back(agent);
         connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
         connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
@@ -143,13 +149,13 @@ void GameField::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
 }
 
-void GameField::runTestCase2(int agentCount) {
+void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
     clearAgents();
 
     int blueCount = agentCount / 2;
     int redCount = agentCount - blueCount;
 
-    setupAgents(blueCount, redCount, grid[0].size()); // Pass the number of columns
+    setupAgents(blueCount, redCount, grid[0].size(), gameManager);
 
     setupScene(); // Set up the scene first
     updateSceneItems(); // Update the scene items after setting up the scene

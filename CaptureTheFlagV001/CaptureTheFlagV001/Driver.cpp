@@ -41,7 +41,7 @@ void Driver::runTestCase2() {
     bool ok;
     int agentCount = QInputDialog::getInt(this, "Test Case 2", "Enter the number of agents:", 8, 1, 100, 1, &ok);
     if (ok) {
-        gameField->runTestCase2(agentCount);
+        gameField->runTestCase2(agentCount, gameField->getGameManager());
     }
 }
 

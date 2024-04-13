@@ -1,35 +1,43 @@
 #include "Agent.h"
 #include "Brain.h"
 #include "Memory.h"
+#include "GameManager.h"
 #include <cmath>
 #include <filesystem>
 #include <iostream>
 
-Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
-    : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), blueAgents(blueAgents), redAgents(redAgents),
+Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
+    : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
     _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true), previousX(x), previousY(y), stuckTimer(0) {}
 
 void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
+    // Updates memory of agent with position of other agents
     updateMemory(otherAgentsPositions);
 
+    // is ai agent activated
     if (!_isEnabled) {
         return;
     }
 
+    // is ai agent tagged
     if (_isTagged) {
         if (checkInHomeZone()) {
+            // at base no longer tagged
             _isTagged = false;
         }
         else {
+            // go to base to remove tag
             moveTowardsHomeZone();
             return;
         }
     }
 
+    // if tagged while holding the flag the flag is reset
     if (_isCarryingFlag && _isTagged) {
         resetFlag();
     }
 
+    // Ai makes decisions
     BrainDecision decision = brain->makeDecision(_isCarryingFlag, isOpponentCarryingFlag(), _isTagged, checkInHomeZone(), distanceToEnemyFlag(), distanceToNearestEnemy(otherAgentsPositions));
 
     switch (decision) {
@@ -82,28 +90,40 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
 
 
 void Agent::updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
+    // checks every ai agents position
     for (const auto& position : otherAgentsPositions) {
-        const auto& opponentInfo = memory->getOpponentInfo(position.first, position.second);
-        memory->updateOpponentInfo(position.first, position.second, std::get<0>(opponentInfo), std::get<1>(opponentInfo));
+        // retrieve opponent info from the map
+        const auto& opponentInfoIt = memory->getOpponentInfo().find(position);
+        if (opponentInfoIt != memory->getOpponentInfo().end()) {
+            // retrieve the tuple value from the map
+            const auto& opponentInfo = opponentInfoIt->second;
+            // update memory with info
+            memory->updateOpponentInfo(position.first, position.second, std::get<0>(opponentInfo), std::get<1>(opponentInfo).first, std::get<1>(opponentInfo).second);
+        }
     }
 }
 
 void Agent::handleFlagInteractions() {
+    // checks if not carrying flag, not tagges, and is within a 10 unit distance or in opponent team zone
     if (!_isCarryingFlag && !_isTagged && distanceToEnemyFlag() <= 10) {
+        // checks to make sure no team ai agent is already holding a flag
         if (!isTeamCarryingFlag(blueAgents, redAgents)) {
             grabFlag();
         }
     }
 
+    // if agent has flag and in home team zone
     if (_isCarryingFlag && checkInHomeZone()) {
         captureFlag();
     }
 
+    // checks if ai agent is tagged while carrying the flag
     if (_isCarryingFlag && _isTagged) {
         resetFlag();
     }
 }
 
+// Checks if team is already holding the enemy flag
 bool Agent::isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents) {
     for (const Agent* teammate : (side == "blue" ? blueAgents : redAgents)) {
         if (teammate != this && teammate->isCarryingFlag()) {
@@ -113,6 +133,7 @@ bool Agent::isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std:
     return false;
 }
 
+// prevent ai agents from spam tagging
 void Agent::handleCooldownTimer() {
     if (cooldownTimer > 0) {
         --cooldownTimer;
@@ -121,15 +142,22 @@ void Agent::handleCooldownTimer() {
 
 bool Agent::isOpponentCarryingFlag() const {
     const auto& opponentInfoMap = memory->getOpponentInfo();
+    // iterate over opponenet info to find an opponent carrying the flag
     return std::any_of(opponentInfoMap.begin(), opponentInfoMap.end(), [](const auto& entry) {
         return std::get<0>(entry.second);
         });
 }
 
+std::pair<int, int> Agent::getEnemyFlagPosition() const {
+    return gameManager->getEnemyFlagPosition(side);
+}
+
 float Agent::distanceToEnemyFlag() const {
-    int enemyFlagX = (side == "blue") ? cols - 1 : 0;
-    int enemyFlagY = rows / 2;
-    return std::hypot(enemyFlagX - x, enemyFlagY - y) * FIELD_WIDTH / GRID_SIZE;
+    // Get the current position of the enemy flag
+    std::pair<int, int> enemyFlagPos = getEnemyFlagPosition();
+
+    // Calculate the distance between the agent and the enemy flag
+    return std::hypot(enemyFlagPos.first - x, enemyFlagPos.second - y) * FIELD_WIDTH / GRID_SIZE;
 }
 
 float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const {
@@ -178,6 +206,11 @@ void Agent::moveTowardsEnemyFlag() {
         x = newX;
         y = newY;
         path.erase(path.begin());
+
+        // Check if the agent has reached the enemy flag
+        if (distanceToEnemyFlag() <= 10) {
+            grabFlag();
+        }
     }
 }
 
@@ -206,9 +239,9 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     double minTimeSinceLastSeen = std::numeric_limits<double>::max();
 
     for (const auto& position : otherAgentsPositions) {
-        const auto& opponentInfo = memory->getOpponentInfo(position.first, position.second);
-        if (std::get<0>(opponentInfo)) {
-            double timeSinceLastSeen = memory->getTimeSinceLastSeen(position.first, position.second).count();
+        bool hasFlag = memory->hasOpponentFlag(position.first, position.second);
+        if (hasFlag) {
+            double timeSinceLastSeen = memory->getTimeSinceLastSeen(position.first, position.second);
             if (timeSinceLastSeen < minTimeSinceLastSeen) {
                 minTimeSinceLastSeen = timeSinceLastSeen;
                 opponentWithFlag = position;
@@ -217,13 +250,9 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     }
 
     if (opponentWithFlag.first != -1 && opponentWithFlag.second != -1) {
-        const auto& opponentInfo = memory->getOpponentInfo(opponentWithFlag.first, opponentWithFlag.second);
-        std::pair<int, int> direction = std::get<1>(opponentInfo);
+        std::pair<int, int> direction = memory->getOpponentDirection(opponentWithFlag.first, opponentWithFlag.second);
         int predictedX = opponentWithFlag.first + direction.first;
         int predictedY = opponentWithFlag.second + direction.second;
-
-        predictedX = std::max(0, std::min(predictedX, cols - 1));
-        predictedY = std::max(0, std::min(predictedY, rows - 1));
 
         if (grid[predictedY][predictedX] != 1) {
             path = pathfinder->findPath(x, y, predictedX, predictedY);
