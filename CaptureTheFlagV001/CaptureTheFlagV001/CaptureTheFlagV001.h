@@ -15,5 +15,5 @@ public:
 
 private:
     Ui::CaptureTheFlagV001Class ui;
-    GameField* gameField; 
+    GameField* gameField;
 };

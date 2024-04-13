@@ -149,9 +149,7 @@ void Agent::exploreField() {
         } while (
             targetPosition.first < 0 || targetPosition.first >= cols ||
             targetPosition.second < 0 || targetPosition.second >= rows ||
-            grid[targetPosition.second][targetPosition.first] == 1 ||
-            (side == "blue" && x >= cols / 2 && targetPosition.first >= cols / 2) ||
-            (side == "red" && x < cols / 2 && targetPosition.first < cols / 2)
+            grid[targetPosition.second][targetPosition.first] == 1
             );
         path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
     }

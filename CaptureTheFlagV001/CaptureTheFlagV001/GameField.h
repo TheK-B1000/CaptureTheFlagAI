@@ -12,8 +12,26 @@ class GameField : public QGraphicsView {
     Q_OBJECT
 
 public:
-    GameField(QWidget* parent = nullptr);
+    GameField(QWidget* parent, const std::vector<std::vector<int>>& grid);
     ~GameField();
+
+    // Getter functions
+    const std::vector<Agent*>& getBlueAgents() const { return blueAgents; }
+    const std::vector<Agent*>& getRedAgents() const { return redAgents; }
+    int getCols() const { return cols; }
+    const std::vector<std::vector<int>>& getGrid() const { return grid; }
+    int getRows() const { return rows; }
+    Pathfinder* getPathfinder() const { return pathfinder; }
+    int getTaggingDistance() const { return taggingDistance; }
+    QGraphicsScene* getScene() const { return scene; }
+
+    void clearAgents();
+    void setupAgents(int blueCount, int redCount, int cols);
+    bool isValidPosition(int x, int y);
+
+    void runTestCase1();
+    void runTestCase2(int agentCount);
+    void runTestCase3();
 
 private slots:
     void updateAgents();
@@ -21,6 +39,9 @@ private slots:
     void handleFlagCapture(const QString& team);
 
 private:
+    void setupScene();
+    QGraphicsEllipseItem* findFlagItem(const QString& team);
+
     QGraphicsScene* scene;
     std::vector<Agent*> blueAgents;
     std::vector<Agent*> redAgents;
@@ -34,6 +55,9 @@ private:
     QGraphicsTextItem* timeRemainingTextItem;
     QGraphicsTextItem* blueScoreTextItem;
     QGraphicsTextItem* redScoreTextItem;
+    int cols;
+    std::vector<std::vector<int>> grid;
+    int rows;
 
     void updateAgentPositions();
     void updateAgentItemsPositions();
@@ -42,10 +66,8 @@ private:
     void updateAgentItem(QGraphicsItem* item, const std::vector<Agent*>& agents, QColor color);
     void updateSceneItems();
     void resetEnemyFlag(const QString& team);
-    QGraphicsEllipseItem* findFlagItem(const QString& team);
     void updateScoreDisplay();
     void updateTimeDisplay();
-    void setupScene();
     void stopGame();
     void declareWinner();
 };
