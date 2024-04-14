@@ -412,7 +412,7 @@ void GameField::checkTagging() {
     for (Agent* agent : blueAgents) {
         if (agent->isOnEnemySide() && !agent->isTagged()) {
             for (Agent* enemyAgent : redAgents) {
-                if (enemyAgent->checkInHomeZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent) <= taggingDistance) {
+                if (enemyAgent->checkInTeamZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent) <= taggingDistance) {
                     agent->setIsTagged(true);
                     break;
                 }
@@ -423,7 +423,7 @@ void GameField::checkTagging() {
     for (Agent* agent : redAgents) {
         if (agent->isOnEnemySide() && !agent->isTagged()) {
             for (Agent* enemyAgent : blueAgents) {
-                if (enemyAgent->checkInHomeZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent) <= taggingDistance) {
+                if (enemyAgent->checkInTeamZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent) <= taggingDistance) {
                     agent->setIsTagged(true);
                     break;
                 }

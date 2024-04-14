@@ -8,8 +8,10 @@ class GameManager {
 public:
     GameManager(int cols, int rows);
 
+    std::pair<int, int> getFlagPosition(const std::string& side) const;
     void setFlagPosition(const std::string& side, int x, int y);
     std::pair<int, int> getEnemyFlagPosition(const std::string& side) const;
+    std::pair<int, int> getTeamZonePosition(const std::string& side) const;
 
 private:
     int cols;

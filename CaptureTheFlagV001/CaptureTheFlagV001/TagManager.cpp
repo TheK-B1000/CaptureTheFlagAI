@@ -35,15 +35,18 @@ void TagManager::resetFlag(Agent* agent) {
     }
 }
 
-void TagManager::handleTaggedAgent(Agent* agent, Pathfinder* pathfinder) {
+void TagManager::handleTaggedAgent(Agent* agent, Pathfinder* pathfinder, GameManager* gameManager) {
     if (agent->isTagged()) {
-        if (agent->checkInHomeZone()) {
+        // Use GameManager to get the team zone position
+        std::pair<int, int> teamZonePosition = gameManager->getTeamZonePosition(agent->getSide());
+
+        // Check if agent is in its team zone
+        if (agent->checkInTeamZone()) {
             agent->setIsTagged(false);
         }
         else {
-            // Move towards home zone using pathfinding
-            std::pair<int, int> homeZonePosition = agent->getHomeZonePosition();
-            std::vector<std::pair<int, int>> path = pathfinder->findPath(agent->getX(), agent->getY(), homeZonePosition.first, homeZonePosition.second);
+            // Move towards team zone using pathfinding
+            std::vector<std::pair<int, int>> path = pathfinder->findPath(agent->getX(), agent->getY(), teamZonePosition.first, teamZonePosition.second);
             if (!path.empty()) {
                 std::pair<int, int> nextPosition = path[0];
                 agent->setX(nextPosition.first);
@@ -53,15 +56,18 @@ void TagManager::handleTaggedAgent(Agent* agent, Pathfinder* pathfinder) {
     }
 }
 
-void TagManager::handleFlagCarrier(Agent* agent, Pathfinder* pathfinder) {
+void TagManager::handleFlagCarrier(Agent* agent, Pathfinder* pathfinder, GameManager* gameManager) {
     if (agent->isCarryingFlag()) {
-        if (agent->checkInHomeZone()) {
+        // Use GameManager to get the team zone position
+        std::pair<int, int> teamZonePosition = gameManager->getTeamZonePosition(agent->getSide());
+
+        // Check if agent is in its team zone
+        if (agent->checkInTeamZone()) {
             agent->captureFlag();
         }
         else {
-            // Move towards home zone using pathfinding
-            std::pair<int, int> homeZonePosition = agent->getHomeZonePosition();
-            std::vector<std::pair<int, int>> path = pathfinder->findPath(agent->getX(), agent->getY(), homeZonePosition.first, homeZonePosition.second);
+            // Move towards team zone using pathfinding
+            std::vector<std::pair<int, int>> path = pathfinder->findPath(agent->getX(), agent->getY(), teamZonePosition.first, teamZonePosition.second);
             if (!path.empty()) {
                 std::pair<int, int> nextPosition = path[0];
                 agent->setX(nextPosition.first);
@@ -71,14 +77,16 @@ void TagManager::handleFlagCarrier(Agent* agent, Pathfinder* pathfinder) {
     }
 }
 
-void TagManager::update(std::vector<Agent*>& agents, Pathfinder* pathfinder) {
+
+
+void TagManager::update(std::vector<Agent*>& agents, Pathfinder* pathfinder, GameManager* gameManager) {
     for (Agent* agent : agents) {
         if (agent->isTagged() && agent->isCarryingFlag()) {
             resetFlag(agent);
         }
 
-        handleTaggedAgent(agent, pathfinder);
-        handleFlagCarrier(agent, pathfinder);
+        handleTaggedAgent(agent, pathfinder, gameManager);
+        handleFlagCarrier(agent, pathfinder, gameManager);
 
         if (agent->getCooldownTimer() > 0) {
             agent->decrementCooldownTimer();

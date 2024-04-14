@@ -63,13 +63,12 @@ public:
     bool grabFlag();
     bool captureFlag();
     void resetFlag();
-    bool checkInHomeZone() const;
+    bool checkInTeamZone() const;
     std::pair<int, int> getDirectionToOpponent(int opponentX, int opponentY) const;
     void setIsTagged(bool val);
     bool isTagged() const;
     bool isCarryingFlag() const;
     void setCarryingFlag(bool carrying);
-    std::pair<int, int> getHomeZonePosition() const;
     int getX() const { return x; }
     int getY() const { return y; }
     void setX(int newX);
