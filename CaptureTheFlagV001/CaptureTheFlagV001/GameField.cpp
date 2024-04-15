@@ -22,38 +22,6 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
     cellSize = 40;
     taggingDistance = 100; // Set the tagging distance
 
-    GameManager* gameManager = new GameManager(cols, rows);
-
-    // Initialize blue agents
-    for (int i = 0; i < 4; i++) {
-        int x, y;
-        do {
-            x = QRandomGenerator::global()->bounded(0, cols); // Allow agents anywhere in the field
-            y = QRandomGenerator::global()->bounded(0, rows);
-        } while (grid[y][x] == 1);
-        Brain* blueBrain = new Brain(); // Create a brain for each blue agent
-        Memory* blueMemory = new Memory(); // Create a memory for each blue agent
-        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
-        blueAgents.push_back(agent);
-        connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
-        connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
-    }
-
-    // Initialize red agents
-    for (int i = 0; i < 4; i++) {
-        int x, y;
-        do {
-            x = QRandomGenerator::global()->bounded(0, cols); // Allow agents anywhere in the field
-            y = QRandomGenerator::global()->bounded(0, rows);
-        } while (grid[y][x] == 1);
-        Brain* redBrain = new Brain(); // Create a brain for each red agent
-        Memory* redMemory = new Memory(); // Create a memory for each red agent
-        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
-        redAgents.push_back(agent);
-        connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-        connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
-    }
-
     setupAgents(4, 4, cols, gameManager);
 
     // Set up the scene
