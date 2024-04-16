@@ -12,6 +12,10 @@ std::pair<int, int> GameManager::getFlagPosition(const std::string& side) const 
     else if (side == "red") {
         return redFlagPosition;
     }
+    else {
+        // Return a default value or throw an exception for an invalid side
+        return std::make_pair(-1, -1);
+    }
 }
 
 void GameManager::setFlagPosition(const std::string& side, int x, int y) {
