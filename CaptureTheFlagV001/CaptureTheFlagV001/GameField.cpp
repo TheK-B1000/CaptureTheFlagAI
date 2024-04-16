@@ -150,7 +150,6 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
 void GameField::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
 }
-
 void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
     clearAgents();
 
@@ -159,8 +158,7 @@ void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
 
     setupAgents(blueCount, redCount, grid[0].size(), gameManager);
 
-    setupScene(); // Set up the scene first
-    //updateSceneItems(); // Update the scene items after setting up the scene
+    updateSceneItems();
 }
 
 void GameField::runTestCase3() {
@@ -251,20 +249,6 @@ void GameField::handleFlagCapture(const QString& team) {
     updateScoreDisplay();
 }
 
-GameField::~GameField() {
-    delete pathfinder;
-    for (Agent* agent : blueAgents) {
-        delete agent->getBrain();
-        delete agent->getMemory();
-        delete agent;
-    }
-    for (Agent* agent : redAgents) {
-        delete agent->getBrain();
-        delete agent->getMemory();
-        delete agent;
-    }
-}
-
 void GameField::updateAgents() {
     updateAgentPositions();
     checkTagging();
@@ -343,17 +327,23 @@ void GameField::updateAgentPositions() {
     std::vector<std::pair<int, int>> redPositions;
 
     for (Agent* agent : blueAgents) {
-        bluePositions.emplace_back(agent->getX(), agent->getY());
-    }
-    for (Agent* agent : redAgents) {
-        redPositions.emplace_back(agent->getX(), agent->getY());
+        int x = agent->getX();
+        int y = agent->getY();
+
+        // Check if the agent's position is within the game field boundaries
+        if (x >= 0 && x < cols && y >= 0 && y < rows) {
+            agent->update(redPositions, redAgents);
+        }
     }
 
-    for (Agent* agent : blueAgents) {
-        agent->update(redPositions, redAgents);
-    }
     for (Agent* agent : redAgents) {
-        agent->update(bluePositions, blueAgents);
+        int x = agent->getX();
+        int y = agent->getY();
+
+        // Check if the agent's position is within the game field boundaries
+        if (x >= 0 && x < cols && y >= 0 && y < rows) {
+            agent->update(bluePositions, blueAgents);
+        }
     }
 }
 
@@ -440,7 +430,6 @@ void GameField::checkTagging() {
         }
     }
 }
-
 
 QGraphicsItem* GameField::getAgentItem(Agent* agent) {
     for (QGraphicsItem* item : scene->items()) {
@@ -607,4 +596,25 @@ void GameField::setupScene() {
         redAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
         scene->addItem(redAgent);
     }
+}
+
+GameField::~GameField() {
+    delete pathfinder;
+
+    for (Agent* agent : blueAgents) {
+        delete agent->getBrain();
+        delete agent->getMemory();
+        delete agent;
+    }
+
+    for (Agent* agent : redAgents) {
+        delete agent->getBrain();
+        delete agent->getMemory();
+        delete agent;
+    }
+
+    blueAgents.clear();
+    redAgents.clear();
+
+    delete gameManager;
 }
