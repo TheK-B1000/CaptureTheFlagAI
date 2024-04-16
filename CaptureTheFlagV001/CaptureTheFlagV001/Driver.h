@@ -18,7 +18,7 @@ private slots:
     void runTestCase3();
 
 private:
-    GameField* gameField;
+    GameField* gameField = nullptr;
     QMenu* testCaseMenu;
 };
 

@@ -5,6 +5,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsItem>
 #include <QTimer>
+
 #include "Agent.h"
 #include "Pathfinder.h"
 
@@ -29,6 +30,7 @@ public:
     void clearAgents();
     void setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager);
     bool isValidPosition(int x, int y);
+
     void runTestCase1();
     void runTestCase2(int agentCount, GameManager* gameManager);
     void runTestCase3();
@@ -41,6 +43,7 @@ private slots:
 private:
     void setupScene();
     QGraphicsEllipseItem* findFlagItem(const QString& team);
+    void updateGridFromZones(QGraphicsEllipseItem* blueZone, QGraphicsEllipseItem* redZone);
 
     QGraphicsScene* scene;
     std::vector<Agent*> blueAgents;
@@ -58,7 +61,7 @@ private:
     int cols;
     std::vector<std::vector<int>> grid;
     int rows;
-    GameManager* gameManager; 
+    GameManager* gameManager;
 
     void updateAgentPositions();
     void updateAgentItemsPositions();

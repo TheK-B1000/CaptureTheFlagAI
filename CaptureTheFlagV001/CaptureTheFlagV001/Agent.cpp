@@ -190,8 +190,16 @@ void Agent::exploreField() {
 
         // Check if the next step is within the game field boundaries
         if (nextStep.first >= 0 && nextStep.first < cols && nextStep.second >= 0 && nextStep.second < rows) {
-            x = nextStep.first;
-            y = nextStep.second;
+            // Update the agent's position with the next step's coordinates
+            int newX = nextStep.first;
+            int newY = nextStep.second;
+
+            // Ensure the new position stays within the boundaries
+            newX = std::max(0, std::min(newX, cols - 1));
+            newY = std::max(0, std::min(newY, rows - 1));
+
+            x = newX;
+            y = newY;
             path.erase(path.begin());
         }
         else {
@@ -206,22 +214,25 @@ void Agent::moveTowardsEnemyFlag() {
     int enemyFlagX = flagPos.first;
     int enemyFlagY = flagPos.second;
 
-    // Ensure the coordinates are within the bounds of the grid
+    // Make sure the coordinates are within the grid boundaries
     enemyFlagX = std::max(0, std::min(enemyFlagX, cols - 1));
     enemyFlagY = std::max(0, std::min(enemyFlagY, rows - 1));
+
     path = pathfinder->findPath(x, y, enemyFlagX, enemyFlagY);
 
     if (!path.empty()) {
-        // Move along the path
         std::pair<int, int> nextStep = path.front();
-        int newX = std::max(0, std::min(nextStep.first, cols - 1));
-        int newY = std::max(0, std::min(nextStep.second, rows - 1));
+        int newX = nextStep.first;
+        int newY = nextStep.second;
+
+        // Make sure the new position is within the grid boundaries
+        newX = std::max(0, std::min(newX, cols - 1));
+        newY = std::max(0, std::min(newY, rows - 1));
 
         x = newX;
         y = newY;
         path.erase(path.begin());
 
-        // Check if the agent has reached the enemy flag
         if (distanceToEnemyFlag() <= 10) {
             grabFlag();
         }
@@ -233,16 +244,20 @@ void Agent::moveTowardsHomeZone() {
     int homeX = homePos.first;
     int homeY = homePos.second;
 
-    // Ensure the coordinates are within the bounds of the grid
+    // Make sure the coordinates are within the grid boundaries
     homeX = std::max(0, std::min(homeX, cols - 1));
     homeY = std::max(0, std::min(homeY, rows - 1));
+
     path = pathfinder->findPath(x, y, homeX, homeY);
 
     if (!path.empty()) {
-        // Move along the path
         std::pair<int, int> nextStep = path.front();
-        int newX = std::max(0, std::min(nextStep.first, cols - 1));
-        int newY = std::max(0, std::min(nextStep.second, rows - 1));
+        int newX = nextStep.first;
+        int newY = nextStep.second;
+
+        // Ensure the new position stays within the boundaries
+        newX = std::max(0, std::min(newX, cols - 1));
+        newY = std::max(0, std::min(newY, rows - 1));
 
         x = newX;
         y = newY;
@@ -274,8 +289,11 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
             std::pair<int, int> nextStep = path.front();
             int newX = nextStep.first;
             int newY = nextStep.second;
+
+            // Ensure the new position stays within the boundaries
             newX = std::max(0, std::min(newX, cols - 1));
             newY = std::max(0, std::min(newY, rows - 1));
+
             x = newX;
             y = newY;
             path.erase(path.begin());

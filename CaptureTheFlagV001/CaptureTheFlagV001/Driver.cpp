@@ -4,12 +4,12 @@
 #include <QAction>
 #include <QInputDialog>
 
-Driver::Driver(QWidget* parent) : QMainWindow(parent) {
+Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
     int rows = 10;
     int cols = 10;
     std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
 
-    GameField* gameField = new GameField(this, grid);
+    gameField = new GameField(this, grid); // Initialize the member variable
     setCentralWidget(gameField);
 
     // Create the menu bar
