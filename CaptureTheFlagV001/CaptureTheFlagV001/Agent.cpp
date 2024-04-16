@@ -173,21 +173,31 @@ float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& othe
 void Agent::exploreField() {
     if (path.empty()) {
         std::pair<int, int> targetPosition;
+
         do {
             targetPosition = pathfinder->getRandomFreePosition();
         } while (
-            // within grid boundaries
             targetPosition.first < 0 || targetPosition.first >= cols ||
             targetPosition.second < 0 || targetPosition.second >= rows ||
             grid[targetPosition.second][targetPosition.first] == 1
             );
+
         path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
     }
+
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
-        x = nextStep.first;
-        y = nextStep.second;
-        path.erase(path.begin());
+
+        // Check if the next step is within the game field boundaries
+        if (nextStep.first >= 0 && nextStep.first < cols && nextStep.second >= 0 && nextStep.second < rows) {
+            x = nextStep.first;
+            y = nextStep.second;
+            path.erase(path.begin());
+        }
+        else {
+            // If the next step is outside the boundaries, clear the path and generate a new one
+            path.clear();
+        }
     }
 }
 
@@ -241,7 +251,7 @@ void Agent::moveTowardsHomeZone() {
 }
 
 void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    // Invalid position since no tagert is found yet
+    // Invalid position since no target is found yet
     std::pair<int, int> opponentWithFlag = std::make_pair(-1, -1);
     double minTimeSinceLastSeen = std::numeric_limits<double>::max();
 

@@ -86,8 +86,8 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
     for (int i = 0; i < blueCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(1, rows / 2);
-            y = QRandomGenerator::global()->bounded(1, cols - 1);
+            x = QRandomGenerator::global()->bounded(1, cols / 2 - 1);
+            y = QRandomGenerator::global()->bounded(1, rows - 1);
         } while (grid[y][x] == 1);
         Brain* blueBrain = new Brain(); // Create a brain for each blue agent
         Memory* blueMemory = new Memory(); // Create a memory for each blue agent
@@ -101,8 +101,8 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
     for (int i = 0; i < redCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(rows / 2, rows - 1);
-            y = QRandomGenerator::global()->bounded(1, cols - 1);
+            x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 1);
+            y = QRandomGenerator::global()->bounded(1, rows - 1);
         } while (grid[y][x] == 1);
         Brain* redBrain = new Brain(); // Create a brain for each red agent
         Memory* redMemory = new Memory(); // Create a memory for each red agent
@@ -126,7 +126,7 @@ void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
     setupAgents(blueCount, redCount, grid[0].size(), gameManager);
 
     setupScene(); // Set up the scene first
-    updateSceneItems(); // Update the scene items after setting up the scene
+    //updateSceneItems(); // Update the scene items after setting up the scene
 }
 
 void GameField::runTestCase3() {
