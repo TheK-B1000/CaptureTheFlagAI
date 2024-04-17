@@ -17,12 +17,12 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
 
     // Create the Pathfinder object
     rows = grid.size();
-    if (rows == 0) {
+    cols = grid[0].size();
+    if (rows == 0 || cols == 0) {
         // Handle the case when the grid is empty
         qDebug() << "Error: Grid is empty";
         return;
     }
-    cols = grid[0].size();
     pathfinder = new Pathfinder(grid);
     cellSize = 40;
     taggingDistance = 100; // Set the tagging distance
@@ -62,7 +62,7 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
     scene->addItem(timeRemainingTextItem);
 
     // Start a timer to update agents
-    int gameDuration = 300; // 10 minutes in seconds
+    int gameDuration = 300; // 5 minutes in seconds
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
@@ -158,6 +158,42 @@ void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
     setupAgents(blueCount, redCount, grid[0].size(), gameManager);
     setupScene();
     updateSceneItems();
+
+    // Set up the score displays
+    QGraphicsTextItem* blueScoreText = new QGraphicsTextItem();
+    blueScoreTextItem = blueScoreText;
+    blueScoreTextItem->setPlainText("Blue Score: 0");
+    blueScoreTextItem->setDefaultTextColor(Qt::blue);
+    blueScoreTextItem->setFont(QFont("Arial", 16));
+    blueScoreTextItem->setPos(10, 10);
+    scene->addItem(blueScoreTextItem);
+
+    QGraphicsTextItem* redScoreText = new QGraphicsTextItem();
+    redScoreTextItem = redScoreText;
+    redScoreTextItem->setPlainText("Red Score: 0");
+    redScoreTextItem->setDefaultTextColor(Qt::red);
+    redScoreTextItem->setFont(QFont("Arial", 16));
+    redScoreTextItem->setPos(600, 10);
+    scene->addItem(redScoreTextItem);
+
+    // Add time remaining display
+    QGraphicsTextItem* timeRemainingText = new QGraphicsTextItem();
+    timeRemainingTextItem = timeRemainingText;
+    timeRemainingTextItem->setPlainText("Time Remaining: 600");
+    timeRemainingTextItem->setDefaultTextColor(Qt::black);
+    timeRemainingTextItem->setFont(QFont("Arial", 16));
+    timeRemainingTextItem->setPos(300, 10);
+    scene->addItem(timeRemainingTextItem);
+
+    // Start a timer to update agents
+    int gameDuration = 300; // 5 minutes in seconds
+    timeRemaining = gameDuration;
+    blueScore = 0;
+    redScore = 0;
+
+    gameTimer = new QTimer(this);
+    connect(gameTimer, &QTimer::timeout, this, &GameField::handleGameTimerTimeout);
+    gameTimer->start(100);
 }
 
 void GameField::runTestCase3() {
