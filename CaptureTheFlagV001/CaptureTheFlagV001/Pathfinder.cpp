@@ -62,14 +62,10 @@ std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, in
         for (const auto& neighbor : getNeighbors(current.first, current.second)) {
             double tentativeGScore = gScore[current] + 1;
 
-            qDebug() << "Pathfinder: Neighbor:" << neighbor.first << neighbor.second << "Tentative G-Score:" << tentativeGScore;
-
             if (gScore.find(neighbor) == gScore.end() || tentativeGScore < gScore[neighbor]) {
                 cameFrom[neighbor] = current;
                 gScore[neighbor] = tentativeGScore;
                 double fScore = tentativeGScore + calculateHeuristic(neighbor.first, neighbor.second, goalX, goalY);
-
-                qDebug() << "Pathfinder: Updated neighbor:" << neighbor.first << neighbor.second << "F-Score:" << fScore;
 
                 openSet.push({ fScore, neighbor });
             }

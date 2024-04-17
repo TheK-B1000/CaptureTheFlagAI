@@ -293,9 +293,15 @@ void GameField::handleFlagCapture(const QString& team) {
 }
 
 void GameField::updateAgents() {
+    qDebug() << "Updating agent positions"; // Add this line
     updateAgentPositions();
+
+    qDebug() << "Checking tagging"; // Add this line
     checkTagging();
+
+    qDebug() << "Updating agent item positions"; // Add this line
     updateAgentItemsPositions();
+
     this->viewport()->update();
 }
 
@@ -376,7 +382,13 @@ void GameField::updateAgentPositions() {
         // Check if the agent's position is within the game field boundaries
         if (x >= 0 && x < cols && y >= 0 && y < rows) {
             agent->update(redPositions, redAgents);
+            bluePositions.emplace_back(x, y); // Add this line
         }
+    }
+
+    qDebug() << "Blue agent positions:"; // Add this line
+    for (const auto& pos : bluePositions) { // Add this loop
+        qDebug() << "(" << pos.first << ", " << pos.second << ")";
     }
 
     for (Agent* agent : redAgents) {
@@ -386,7 +398,13 @@ void GameField::updateAgentPositions() {
         // Check if the agent's position is within the game field boundaries
         if (x >= 0 && x < cols && y >= 0 && y < rows) {
             agent->update(bluePositions, blueAgents);
+            redPositions.emplace_back(x, y); // Add this line
         }
+    }
+
+    qDebug() << "Red agent positions:"; // Add this line
+    for (const auto& pos : redPositions) { // Add this loop
+        qDebug() << "(" << pos.first << ", " << pos.second << ")";
     }
 }
 
@@ -585,14 +603,14 @@ void GameField::setupScene() {
     blueArea->setPen(QPen(Qt::blue, 2));
     scene->addItem(blueArea);
 
-    // Add the combined game field
-    QGraphicsRectItem* gameField = new QGraphicsRectItem(5, 10, 790, 580);
-    gameField->setPen(QPen(Qt::black, 2));
-    scene->addItem(gameField);
-
     QGraphicsRectItem* redArea = new QGraphicsRectItem(410, 10, 390, 580);
     redArea->setPen(QPen(Qt::red, 2));
     scene->addItem(redArea);
+
+    // Add the combined game field of blue area and red area
+    QGraphicsRectItem* gameField = new QGraphicsRectItem(5, 10, 790, 580);
+    gameField->setPen(QPen(Qt::black, 2));
+    scene->addItem(gameField);
 
     // Add team zones (circular areas around flags)
     QGraphicsEllipseItem* blueZone = new QGraphicsEllipseItem(50, 260, 80, 80);
@@ -625,6 +643,13 @@ void GameField::setupScene() {
     redFlag->setPolygon(redTriangle);
     redFlag->setBrush(Qt::red);
     scene->addItem(redFlag);
+
+    // Update the GameManager with the new flag positions
+    QPointF blueFlagPosition = blueFlag->boundingRect().center();
+    QPointF redFlagPosition = redFlag->boundingRect().center();
+
+    gameManager->setFlagPosition("blue", blueFlagPosition.x(), blueFlagPosition.y());
+    gameManager->setFlagPosition("red", redFlagPosition.x(), redFlagPosition.y());
 
     // Add agents
     for (Agent* agent : blueAgents) {

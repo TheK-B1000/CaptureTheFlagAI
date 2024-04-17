@@ -5,6 +5,7 @@
 #include <cmath>
 #include <filesystem>
 #include <iostream>
+#include <QDebug>
 
 Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
     : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
@@ -38,28 +39,36 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     }
 
     // Ai makes decisions
+    qDebug() << "Agent at (" << x << ", " << y << ") making decision...";
     BrainDecision decision = brain->makeDecision(_isCarryingFlag, isOpponentCarryingFlag(), _isTagged, checkInTeamZone(), distanceToEnemyFlag(), distanceToNearestEnemy(otherAgentsPositions));
 
     switch (decision) {
     case BrainDecision::Explore:
+        qDebug() << "Exploring field";
         exploreField();
         break;
     case BrainDecision::GrabFlag:
+        qDebug() << "Moving towards enemy flag";
         moveTowardsEnemyFlag();
         break;
     case BrainDecision::CaptureFlag:
+        qDebug() << "Moving towards home zone";
         moveTowardsHomeZone();
         break;
     case BrainDecision::RecoverFlag:
+        qDebug() << "Chasing opponent with flag";
         chaseOpponentWithFlag(otherAgentsPositions);
         break;
     case BrainDecision::TagEnemy:
+        qDebug() << "Tagging enemy";
         tagEnemy(otherAgents);
         break;
     case BrainDecision::ReturnToHomeZone:
+        qDebug() << "Returning to home zone";
         moveTowardsHomeZone();
         break;    
     default:
+        qDebug() << "Exploring field";
         exploreField();
         break;
     }
@@ -172,16 +181,13 @@ float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& othe
 }
 
 void Agent::exploreField() {
+    // the path vector contains the sequence of positions that the agent should follow
     if (path.empty()) {
         std::pair<int, int> targetPosition;
 
         do {
             targetPosition = pathfinder->getRandomFreePosition();
-        } while (
-            targetPosition.first < 0 || targetPosition.first >= cols ||
-            targetPosition.second < 0 || targetPosition.second >= rows ||
-            grid[targetPosition.second][targetPosition.first] == 1
-            );
+        } while (grid[targetPosition.second][targetPosition.first] == 1);
 
         path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
     }
@@ -189,76 +195,50 @@ void Agent::exploreField() {
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
 
-        // Check if the next step is within the game field boundaries
-        if (nextStep.first >= 0 && nextStep.first < cols && nextStep.second >= 0 && nextStep.second < rows) {
-            // Update the agent's position with the next step's coordinates
-            int newX = nextStep.first;
-            int newY = nextStep.second;
-
-            // Ensure the new position stays within the boundaries
-            newX = std::max(0, std::min(newX, cols - 1));
-            newY = std::max(0, std::min(newY, rows - 1));
-
-            x = newX;
-            y = newY;
-            path.erase(path.begin());
-        }
-        else {
-            // If the next step is outside the boundaries, clear the path and generate a new one
-            path.clear();
-        }
+        // Update the agent's position with the next step's coordinates
+        x = nextStep.first;
+        y = nextStep.second;
+        path.erase(path.begin());
     }
 }
 
 void Agent::moveTowardsEnemyFlag() {
     std::pair<int, int> flagPos = gameManager->getEnemyFlagPosition(side);
-    int enemyFlagX = flagPos.first;
-    int enemyFlagY = flagPos.second;
 
-    // Make sure the coordinates are within the grid boundaries
-    enemyFlagX = std::max(0, std::min(enemyFlagX, cols - 1));
-    enemyFlagY = std::max(0, std::min(enemyFlagY, rows - 1));
+    // Check if the enemy flag position is within the game field boundaries
+    if (flagPos.first >= 5 && flagPos.first <= 794 && flagPos.second >= 10 && flagPos.second <= 589) {
+        path = pathfinder->findPath(x, y, flagPos.first, flagPos.second);
 
-    path = pathfinder->findPath(x, y, enemyFlagX, enemyFlagY);
+        if (!path.empty()) {
+            std::pair<int, int> nextStep = path.front();
 
-    if (!path.empty()) {
-        std::pair<int, int> nextStep = path.front();
-        int newX = nextStep.first;
-        int newY = nextStep.second;
+            // Update the agent's position with the next step's coordinates
+            x = nextStep.first;
+            y = nextStep.second;
+            path.erase(path.begin());
 
-        // Make sure the new position is within the grid boundaries
-        newX = std::max(0, std::min(newX, cols - 1));
-        newY = std::max(0, std::min(newY, rows - 1));
-
-        x = newX;
-        y = newY;
-        path.erase(path.begin());
-
-        if (distanceToEnemyFlag() <= 10) {
-            grabFlag();
+            if (distanceToEnemyFlag() <= 10) {
+                grabFlag();
+            }
         }
+    }
+    else {
+        // Handle the case when the enemy flag position is outside the game field boundaries
+        qDebug() << "Enemy flag position is outside the game field boundaries!";
     }
 }
 
 void Agent::moveTowardsHomeZone() {
     std::pair<int, int> homePos = gameManager->getTeamZonePosition(side);
-    int homeX = homePos.first;
-    int homeY = homePos.second;
-
-    // Make sure the coordinates are within the grid boundaries
-    homeX = std::max(0, std::min(homeX, cols - 1));
-    homeY = std::max(0, std::min(homeY, rows - 1));
+    int homeX = std::max(5, std::min(homePos.first, 794));
+    int homeY = std::max(10, std::min(homePos.second, 589));
 
     path = pathfinder->findPath(x, y, homeX, homeY);
 
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
-        int newX = nextStep.first;
-        int newY = nextStep.second;
-
-        // Ensure the new position stays within the boundaries
-        newX = std::max(0, std::min(newX, cols - 1));
-        newY = std::max(0, std::min(newY, rows - 1));
+        int newX = std::max(5, std::min(nextStep.first, 794));
+        int newY = std::max(10, std::min(nextStep.second, 589));
 
         x = newX;
         y = newY;
@@ -267,11 +247,9 @@ void Agent::moveTowardsHomeZone() {
 }
 
 void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
-    // Invalid position since no target is found yet
     std::pair<int, int> opponentWithFlag = std::make_pair(-1, -1);
     double minTimeSinceLastSeen = std::numeric_limits<double>::max();
 
-    // Checks each enemy ai agents positions
     for (const auto& position : otherAgentsPositions) {
         bool hasFlag = memory->hasOpponentFlag(position.first, position.second);
         if (hasFlag) {
@@ -283,17 +261,15 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
         }
     }
 
-    // If not (-1,-1), an enemy ai agent was found
     if (opponentWithFlag.first != -1 && opponentWithFlag.second != -1) {
-        path = pathfinder->findPath(x, y, opponentWithFlag.first, opponentWithFlag.second);
+        int opponentX = std::max(5, std::min(opponentWithFlag.first, 794));
+        int opponentY = std::max(10, std::min(opponentWithFlag.second, 589));
+        path = pathfinder->findPath(x, y, opponentX, opponentY);
+
         if (!path.empty()) {
             std::pair<int, int> nextStep = path.front();
-            int newX = nextStep.first;
-            int newY = nextStep.second;
-
-            // Ensure the new position stays within the boundaries
-            newX = std::max(0, std::min(newX, cols - 1));
-            newY = std::max(0, std::min(newY, rows - 1));
+            int newX = std::max(5, std::min(nextStep.first, 794));
+            int newY = std::max(10, std::min(nextStep.second, 589));
 
             x = newX;
             y = newY;
