@@ -58,7 +58,8 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         break;
     case BrainDecision::ReturnToHomeZone:
         moveTowardsHomeZone();
-    break;    default:
+        break;    
+    default:
         exploreField();
         break;
     }

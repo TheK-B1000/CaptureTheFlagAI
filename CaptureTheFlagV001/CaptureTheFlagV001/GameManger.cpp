@@ -47,3 +47,13 @@ std::pair<int, int> GameManager::getTeamZonePosition(const std::string& side) co
 
     return std::make_pair(teamZoneCenterX, teamZoneCenterY);
 }
+
+void GameManager::resetGame() {
+    // Reset flag positions to their initial values
+    blueFlagPosition = std::make_pair(0, rows / 2);
+    redFlagPosition = std::make_pair(cols - 1, rows / 2);
+
+    // Reset game state variables
+    currentTime = maxTime;
+    gameOver = false;
+}

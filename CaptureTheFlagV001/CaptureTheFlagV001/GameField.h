@@ -42,7 +42,7 @@ private slots:
 
 private:
     void setupScene();
-    QGraphicsEllipseItem* findFlagItem(const QString& team);
+    QGraphicsPolygonItem* findFlagItem(const QString& team);
     void updateGridFromZones(QGraphicsEllipseItem* blueZone, QGraphicsEllipseItem* redZone);
 
     QGraphicsScene* scene;

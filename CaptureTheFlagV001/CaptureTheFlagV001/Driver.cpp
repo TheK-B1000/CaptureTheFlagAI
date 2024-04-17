@@ -9,7 +9,9 @@ Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
     int cols = 10;
     std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
 
-    gameField = new GameField(this, grid); // Initialize the member variable
+    gameField = new GameField(this, grid);
+    gameManager = gameField->getGameManager();
+
     setCentralWidget(gameField);
 
     // Create the menu bar
@@ -34,10 +36,12 @@ Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
 }
 
 void Driver::runTestCase1() {
+    gameManager->resetGame();
     gameField->runTestCase1();
 }
 
 void Driver::runTestCase2() {
+    gameManager->resetGame();
     bool ok;
     int agentCount = QInputDialog::getInt(this, "Test Case 2", "Enter the number of agents:", 8, 1, 100, 1, &ok);
     if (ok) {
@@ -46,5 +50,6 @@ void Driver::runTestCase2() {
 }
 
 void Driver::runTestCase3() {
+    gameManager->resetGame();
     gameField->runTestCase3();
 }

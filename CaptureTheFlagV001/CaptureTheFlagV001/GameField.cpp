@@ -150,21 +150,20 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
 void GameField::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
 }
+
 void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
     clearAgents();
-
     int blueCount = agentCount / 2;
     int redCount = agentCount - blueCount;
-
     setupAgents(blueCount, redCount, grid[0].size(), gameManager);
-
+    setupScene();
     updateSceneItems();
 }
 
 void GameField::runTestCase3() {
     // Test case 3: Change the position of team zones and flags
-    QGraphicsEllipseItem* blueFlag = findFlagItem("blue");
-    QGraphicsEllipseItem* redFlag = findFlagItem("red");
+    QGraphicsPolygonItem* blueFlag = findFlagItem("blue");
+    QGraphicsPolygonItem* redFlag = findFlagItem("red");
 
     if (blueFlag && redFlag) {
         // Move the blue team zone to the top-left corner
@@ -184,8 +183,12 @@ void GameField::runTestCase3() {
             blueZone->setRect(blueZoneRect);
 
             // Move the blue flag to the center of the new team zone position
-            QPointF blueFlagPos = blueZoneRect.center() - QPointF(blueFlag->rect().width() / 2, blueFlag->rect().height() / 2);
-            blueFlag->setPos(blueFlagPos);
+            QPointF blueFlagCenter = blueZoneRect.center();
+            QPolygon blueTriangle;
+            blueTriangle << QPoint(blueFlagCenter.x() - 10, blueFlagCenter.y() - 20)
+                << QPoint(blueFlagCenter.x(), blueFlagCenter.y())
+                << QPoint(blueFlagCenter.x() + 10, blueFlagCenter.y() - 20);
+            blueFlag->setPolygon(blueTriangle);
         }
 
         // Move the red team zone to the bottom-right corner
@@ -205,8 +208,12 @@ void GameField::runTestCase3() {
             redZone->setRect(redZoneRect);
 
             // Move the red flag to the center of the new team zone position
-            QPointF redFlagPos = redZoneRect.center() - QPointF(redFlag->rect().width() / 2, redFlag->rect().height() / 2);
-            redFlag->setPos(redFlagPos);
+            QPointF redFlagCenter = redZoneRect.center();
+            QPolygon redTriangle;
+            redTriangle << QPoint(redFlagCenter.x() - 10, redFlagCenter.y() - 20)
+                << QPoint(redFlagCenter.x(), redFlagCenter.y())
+                << QPoint(redFlagCenter.x() + 10, redFlagCenter.y() - 20);
+            redFlag->setPolygon(redTriangle);
         }
 
         // Update the grid to reflect the new team zone positions
@@ -441,18 +448,12 @@ QGraphicsItem* GameField::getAgentItem(Agent* agent) {
 }
 
 void GameField::updateAgentItem(QGraphicsItem* item, const std::vector<Agent*>& agents, QColor color) {
-    if (QGraphicsPolygonItem* agentItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item)) {
+    if (QGraphicsEllipseItem* agentItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
         for (Agent* agent : agents) {
             if (agentItem->brush().color() == color) {
                 int x = agent->getX() * cellSize;
                 int y = agent->getY() * cellSize;
-                const int squareSize = 20;
-                QPolygon square;
-                square << QPoint(x - squareSize / 2, y - squareSize / 2)
-                    << QPoint(x + squareSize / 2, y - squareSize / 2)
-                    << QPoint(x + squareSize / 2, y + squareSize / 2)
-                    << QPoint(x - squareSize / 2, y + squareSize / 2);
-                agentItem->setPolygon(square);
+                agentItem->setRect(x - 10, y - 10, 20, 20);
             }
         }
     }
@@ -468,9 +469,11 @@ void GameField::updateSceneItems() {
 void GameField::resetEnemyFlag(const QString& team) {
     if (team == "red") {
         // Reset the red flag position
-        QGraphicsEllipseItem* redFlag = findFlagItem("red");
+        QGraphicsPolygonItem* redFlag = findFlagItem("red");
         if (redFlag) {
-            redFlag->setPos(705, 285);
+            QPolygon redTriangle;
+            redTriangle << QPoint(710, 280) << QPoint(720, 300) << QPoint(700, 300);
+            redFlag->setPolygon(redTriangle);
         }
         else {
             // Handle the case when the red flag item is not found in the scene
@@ -484,9 +487,11 @@ void GameField::resetEnemyFlag(const QString& team) {
     }
     else if (team == "blue") {
         // Reset the blue flag position
-        QGraphicsEllipseItem* blueFlag = findFlagItem("blue");
+        QGraphicsPolygonItem* blueFlag = findFlagItem("blue");
         if (blueFlag) {
-            blueFlag->setPos(65, 285);
+            QPolygon blueTriangle;
+            blueTriangle << QPoint(70, 280) << QPoint(80, 300) << QPoint(60, 300);
+            blueFlag->setPolygon(blueTriangle);
         }
         else {
             // Handle the case when the blue flag item is not found in the scene
@@ -500,12 +505,12 @@ void GameField::resetEnemyFlag(const QString& team) {
     }
 }
 
-QGraphicsEllipseItem* GameField::findFlagItem(const QString& team) {
+QGraphicsPolygonItem* GameField::findFlagItem(const QString& team) {
     for (QGraphicsItem* item : scene->items()) {
-        if (QGraphicsEllipseItem* ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
-            if ((team == "red" && ellipseItem->brush().color() == Qt::red) ||
-                (team == "blue" && ellipseItem->brush().color() == Qt::blue)) {
-                return ellipseItem;
+        if (QGraphicsPolygonItem* polygonItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item)) {
+            if ((team == "red" && polygonItem->brush().color() == Qt::red) ||
+                (team == "blue" && polygonItem->brush().color() == Qt::blue)) {
+                return polygonItem;
             }
         }
     }
@@ -539,59 +544,68 @@ void GameField::setupScene() {
     rows = grid.size();
     cols = grid[0].size();
 
-    // Add team areas
+    // Add team areas fields
     QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
     blueArea->setPen(QPen(Qt::blue, 2));
     scene->addItem(blueArea);
+
+    // Add the combined game field
+    QGraphicsRectItem* gameField = new QGraphicsRectItem(5, 10, 790, 580);
+    gameField->setPen(QPen(Qt::black, 2));
+    scene->addItem(gameField);
 
     QGraphicsRectItem* redArea = new QGraphicsRectItem(410, 10, 390, 580);
     redArea->setPen(QPen(Qt::red, 2));
     scene->addItem(redArea);
 
-    // Add flags
-    QGraphicsEllipseItem* blueFlag = new QGraphicsEllipseItem(70, 290, 20, 20);
-    blueFlag->setBrush(Qt::blue);
-    scene->addItem(blueFlag);
-
-    QGraphicsEllipseItem* redFlag = new QGraphicsEllipseItem(710, 290, 20, 20);
-    redFlag->setBrush(Qt::red);
-    scene->addItem(redFlag);
-
     // Add team zones (circular areas around flags)
-    QGraphicsEllipseItem* blueZone = new QGraphicsEllipseItem(40, 260, 80, 80);
+    QGraphicsEllipseItem* blueZone = new QGraphicsEllipseItem(50, 260, 80, 80);
     QPen bluePen(Qt::blue);
     bluePen.setWidth(3);
     blueZone->setPen(bluePen);
     blueZone->setBrush(Qt::NoBrush);
     scene->addItem(blueZone);
 
-    QGraphicsEllipseItem* redZone = new QGraphicsEllipseItem(680, 260, 80, 80);
+    QGraphicsEllipseItem* redZone = new QGraphicsEllipseItem(690, 260, 80, 80);
     QPen redPen(Qt::red);
     redPen.setWidth(3);
     redZone->setPen(redPen);
     redZone->setBrush(Qt::NoBrush);
     scene->addItem(redZone);
 
+    // Add flags
+    QGraphicsPolygonItem* blueFlag = new QGraphicsPolygonItem();
+    QPolygon blueTriangle;
+    qreal blueFlagCenter = blueZone->rect().center().y();
+    blueTriangle << QPoint(70, blueFlagCenter - 20) << QPoint(80, blueFlagCenter) << QPoint(60, blueFlagCenter);
+    blueFlag->setPolygon(blueTriangle);
+    blueFlag->setBrush(Qt::blue);
+    scene->addItem(blueFlag);
+
+    QGraphicsPolygonItem* redFlag = new QGraphicsPolygonItem();
+    QPolygon redTriangle;
+    qreal redFlagCenter = redZone->rect().center().y();
+    redTriangle << QPoint(710, redFlagCenter - 20) << QPoint(720, redFlagCenter) << QPoint(700, redFlagCenter);
+    redFlag->setPolygon(redTriangle);
+    redFlag->setBrush(Qt::red);
+    scene->addItem(redFlag);
+
     // Add agents
     for (Agent* agent : blueAgents) {
-        QGraphicsPolygonItem* blueAgent = new QGraphicsPolygonItem();
-        QPolygon blueTriangle;
+        QGraphicsEllipseItem* blueAgent = new QGraphicsEllipseItem();
         int x = agent->getX() * cellSize;
         int y = agent->getY() * cellSize;
-        blueTriangle << QPoint(x, y) << QPoint(x - 10, y + 20) << QPoint(x + 10, y + 20);
-        blueAgent->setPolygon(blueTriangle);
+        blueAgent->setRect(x - 10, y - 10, 20, 20);
         blueAgent->setBrush(Qt::blue);
         blueAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
         scene->addItem(blueAgent);
     }
 
     for (Agent* agent : redAgents) {
-        QGraphicsPolygonItem* redAgent = new QGraphicsPolygonItem();
-        QPolygon redTriangle;
+        QGraphicsEllipseItem* redAgent = new QGraphicsEllipseItem();
         int x = agent->getX() * cellSize;
         int y = agent->getY() * cellSize;
-        redTriangle << QPoint(x, y) << QPoint(x - 10, y + 20) << QPoint(x + 10, y + 20);
-        redAgent->setPolygon(redTriangle);
+        redAgent->setRect(x - 10, y - 10, 20, 20);
         redAgent->setBrush(Qt::red);
         redAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
         scene->addItem(redAgent);
