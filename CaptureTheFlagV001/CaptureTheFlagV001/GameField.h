@@ -12,7 +12,7 @@ class GameField : public QGraphicsView {
     Q_OBJECT
 
 public:
-    GameField(QWidget* parent, const std::vector<std::vector<int>>& grid);
+    GameField(QWidget* parent, int gameFieldWidth, int gameFieldHeight, int cellSize);
     ~GameField();
 
     // Getter functions
@@ -28,7 +28,6 @@ public:
     void clearAgents();
     void setupAgents(int blueCount, int redCount, int cols);
     bool isValidPosition(int x, int y);
-
     void runTestCase1();
     void runTestCase2(int agentCount);
     void runTestCase3();
@@ -40,13 +39,20 @@ private slots:
 
 private:
     void setupScene();
-    QGraphicsEllipseItem* findFlagItem(const QString& team);
+    static const int GAME_FIELD_X = 5;
+    static const int GAME_FIELD_Y = 10;
+    static const int GAME_FIELD_WIDTH = 790;
+    static const int GAME_FIELD_HEIGHT = 580;
+    QGraphicsPolygonItem* findFlagItem(const QString& team);
+    void updateGridFromZones(QGraphicsEllipseItem* blueZone, QGraphicsEllipseItem* redZone);
 
     QGraphicsScene* scene;
     std::vector<Agent*> blueAgents;
     std::vector<Agent*> redAgents;
     Pathfinder* pathfinder;
     int cellSize;
+    int gameFieldWidth;
+    int gameFieldHeight;
     int blueScore;
     int redScore;
     int timeRemaining;

@@ -5,9 +5,11 @@
 #include <filesystem>
 #include <iostream>
 
-Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
-    : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), blueAgents(blueAgents), redAgents(redAgents),
-    _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true), previousX(x), previousY(y), stuckTimer(0) {}
+Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents, int gameFieldX, int gameFieldY, int gameFieldWidth, int gameFieldHeight)
+    : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
+    _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true), previousX(x), previousY(y), stuckTimer(0),
+    gameFieldX(gameFieldX), gameFieldY(gameFieldY), gameFieldWidth(gameFieldWidth), gameFieldHeight(gameFieldHeight),
+    SIDE_BOUNDARY_X(cols / 2) {}
 
 void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
     updateMemory(otherAgentsPositions);
@@ -57,9 +59,14 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
 
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
-        x = nextStep.first;
-        y = nextStep.second;
-        path.erase(path.begin());
+        if (isWithinField(nextStep.first, nextStep.second)) {
+            x = nextStep.first;
+            y = nextStep.second;
+            path.erase(path.begin());
+        }
+        else {
+            path.clear(); // Clear the path if the next step is outside the field
+        }
     }
 
     if (path.empty() && (x == previousX && y == previousY)) {
@@ -147,23 +154,42 @@ void Agent::exploreField() {
         do {
             targetPosition = pathfinder->getRandomFreePosition();
         } while (
-            targetPosition.first < 0 || targetPosition.first >= cols ||
-            targetPosition.second < 0 || targetPosition.second >= rows ||
+            targetPosition.first < gameFieldX || targetPosition.first >= gameFieldX + gameFieldWidth ||
+            targetPosition.second < gameFieldY || targetPosition.second >= gameFieldY + gameFieldHeight ||
             grid[targetPosition.second][targetPosition.first] == 1
             );
         path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
     }
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
-        x = nextStep.first;
-        y = nextStep.second;
-        path.erase(path.begin());
+
+        // Check if the next step is within the game field boundaries
+        if (nextStep.first >= 0 && nextStep.first < cols && nextStep.second >= 0 && nextStep.second < rows) {
+            // Update the agent's position with the next step's coordinates
+            int newX = nextStep.first;
+            int newY = nextStep.second;
+
+            // Ensure the new position stays within the boundaries
+            newX = std::max(0, std::min(newX, cols - 1));
+            newY = std::max(0, std::min(newY, rows - 1));
+
+            x = newX;
+            y = newY;
+            path.erase(path.begin());
+        }
+        else {
+            // If the next step is outside the boundaries, clear the path and generate a new one
+            path.clear();
+        }
     }
 }
 
 void Agent::moveTowardsEnemyFlag() {
-    int enemyFlagX = (side == "blue") ? cols - 1 : 0;
-    int enemyFlagY = rows / 2;
+    std::pair<int, int> flagPos = gameManager->getEnemyFlagPosition(side);
+    int enemyFlagX = flagPos.first;
+    int enemyFlagY = flagPos.second;
+
+    // Make sure the coordinates are within the grid boundaries
     enemyFlagX = std::max(0, std::min(enemyFlagX, cols - 1));
     enemyFlagY = std::max(0, std::min(enemyFlagY, rows - 1));
     path = pathfinder->findPath(x, y, enemyFlagX, enemyFlagY);
@@ -172,18 +198,26 @@ void Agent::moveTowardsEnemyFlag() {
         int newX = nextStep.first;
         int newY = nextStep.second;
 
+        // Make sure the new position is within the grid boundaries
         newX = std::max(0, std::min(newX, cols - 1));
         newY = std::max(0, std::min(newY, rows - 1));
 
         x = newX;
         y = newY;
         path.erase(path.begin());
+
+        if (distanceToEnemyFlag() <= 10) {
+            grabFlag();
+        }
     }
 }
 
 void Agent::moveTowardsHomeZone() {
-    int homeX = (side == "blue") ? 0 : cols - 1;
-    int homeY = rows / 2;
+    std::pair<int, int> homePos = gameManager->getTeamZonePosition(side);
+    int homeX = homePos.first;
+    int homeY = homePos.second;
+
+    // Make sure the coordinates are within the grid boundaries
     homeX = std::max(0, std::min(homeX, cols - 1));
     homeY = std::max(0, std::min(homeY, rows - 1));
     path = pathfinder->findPath(x, y, homeX, homeY);
@@ -192,6 +226,7 @@ void Agent::moveTowardsHomeZone() {
         int newX = nextStep.first;
         int newY = nextStep.second;
 
+        // Ensure the new position stays within the boundaries
         newX = std::max(0, std::min(newX, cols - 1));
         newY = std::max(0, std::min(newY, rows - 1));
 
@@ -217,28 +252,19 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     }
 
     if (opponentWithFlag.first != -1 && opponentWithFlag.second != -1) {
-        const auto& opponentInfo = memory->getOpponentInfo(opponentWithFlag.first, opponentWithFlag.second);
-        std::pair<int, int> direction = std::get<1>(opponentInfo);
-        int predictedX = opponentWithFlag.first + direction.first;
-        int predictedY = opponentWithFlag.second + direction.second;
+        path = pathfinder->findPath(x, y, opponentWithFlag.first, opponentWithFlag.second);
+        if (!path.empty()) {
+            std::pair<int, int> nextStep = path.front();
+            int newX = nextStep.first;
+            int newY = nextStep.second;
 
-        predictedX = std::max(0, std::min(predictedX, cols - 1));
-        predictedY = std::max(0, std::min(predictedY, rows - 1));
+            // Ensure the new position stays within the boundaries
+            newX = std::max(0, std::min(newX, cols - 1));
+            newY = std::max(0, std::min(newY, rows - 1));
 
-        if (grid[predictedY][predictedX] != 1) {
-            path = pathfinder->findPath(x, y, predictedX, predictedY);
-            if (!path.empty()) {
-                std::pair<int, int> nextStep = path.front();
-                int newX = nextStep.first;
-                int newY = nextStep.second;
-
-                newX = std::max(0, std::min(newX, cols - 1));
-                newY = std::max(0, std::min(newY, rows - 1));
-
-                x = newX;
-                y = newY;
-                path.erase(path.begin());
-            }
+            x = newX;
+            y = newY;
+            path.erase(path.begin());
         }
     }
 }
@@ -268,7 +294,7 @@ void Agent::tagEnemy(std::vector<Agent*>& otherAgents) {
 }
 
 bool Agent::isOnEnemySide() const {
-    return (side == "blue" && x >= 410) || (side == "red" && x < 410);
+    return (side == "blue" && x >= SIDE_BOUNDARY_X) || (side == "red" && x < SIDE_BOUNDARY_X);
 }
 
 bool Agent::grabFlag() {
@@ -342,6 +368,10 @@ void Agent::decrementCooldownTimer() {
     if (cooldownTimer > 0) {
         --cooldownTimer;
     }
+}
+
+bool Agent::isWithinField(int x, int y) const {
+    return x >= gameFieldX && x < gameFieldX + gameFieldWidth && y >= gameFieldY && y < gameFieldY + gameFieldHeight;
 }
 
 std::pair<int, int> Agent::getDirectionToOpponent(int opponentX, int opponentY) const {

@@ -7,17 +7,31 @@
 #include <QGraphicsTextItem>
 #include <QFont>
 
-GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
-    : QGraphicsView(parent), grid(grid) {
+GameField::GameField(QWidget* parent, int gameFieldWidth, int gameFieldHeight, int cellSize)
+    : QGraphicsView(parent), cellSize(cellSize), gameFieldWidth(gameFieldWidth), gameFieldHeight(gameFieldHeight) {
     setRenderHint(QPainter::Antialiasing);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
+    if (cellSize <= 0) {
+        qDebug() << "Error: cellSize must be greater than zero";
+        return;
+    }
+
     // Create the Pathfinder object
-    rows = grid.size();
-    cols = grid[0].size();
+    rows = gameFieldHeight / cellSize;
+    if (rows == 0) {
+        // Handle the case when the grid is empty
+        qDebug() << "Error: Grid is empty";
+        return;
+    }
+
+    cols = gameFieldWidth / cellSize;
+
+    // Initialize the grid vector with the correct dimensions
+    grid.resize(rows, std::vector<int>(cols, 0));
+
     pathfinder = new Pathfinder(grid);
-    cellSize = 40;
     taggingDistance = 100; // Set the tagging distance
 
     // Initialize blue agents
@@ -107,35 +121,49 @@ void GameField::clearAgents() {
     redAgents.clear();
 }
 
-void GameField::setupAgents(int blueCount, int redCount, int cols) {
+void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager) {
     // Initialize blue agents
     for (int i = 0; i < blueCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(1, rows / 2);
-            y = QRandomGenerator::global()->bounded(1, cols - 1);
-        } while (grid[x][y] == 1);
-        Brain* blueBrain = new Brain(); // Create a brain for each blue agent
-        Memory* blueMemory = new Memory(); // Create a memory for each blue agent
-        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, blueAgents, redAgents);
+            x = QRandomGenerator::global()->bounded(GAME_FIELD_X, GAME_FIELD_X + GAME_FIELD_WIDTH / 2);
+            y = QRandomGenerator::global()->bounded(GAME_FIELD_Y, GAME_FIELD_Y + GAME_FIELD_HEIGHT);
+        } while (grid[(y - GAME_FIELD_Y) / cellSize][(x - GAME_FIELD_X) / cellSize] != 0);
+        Brain* blueBrain = new Brain();
+        if (!blueBrain) {
+            qDebug() << "Failed to allocate memory for Brain object";
+        }
+        Memory* blueMemory = new Memory();
+        if (!blueMemory) {
+            qDebug() << "Failed to allocate memory for Memory object";
+            delete blueBrain;
+        }
+        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents, GAME_FIELD_X, GAME_FIELD_Y, GAME_FIELD_WIDTH, GAME_FIELD_HEIGHT);
         blueAgents.push_back(agent);
         connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
-        connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
+        connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 
     // Initialize red agents
     for (int i = 0; i < redCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(rows / 2, rows - 1);
-            y = QRandomGenerator::global()->bounded(1, cols - 1);
-        } while (grid[x][y] == 1);
-        Brain* redBrain = new Brain(); // Create a brain for each red agent
-        Memory* redMemory = new Memory(); // Create a memory for each red agent
-        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, blueAgents, redAgents);
+            x = QRandomGenerator::global()->bounded(GAME_FIELD_X + GAME_FIELD_WIDTH / 2, GAME_FIELD_X + GAME_FIELD_WIDTH);
+            y = QRandomGenerator::global()->bounded(GAME_FIELD_Y, GAME_FIELD_Y + GAME_FIELD_HEIGHT);
+        } while (grid[(y - GAME_FIELD_Y) / cellSize][(x - GAME_FIELD_X) / cellSize] != 0);
+        Brain* redBrain = new Brain();
+        if (!redBrain) {
+            qDebug() << "Failed to allocate memory for Brain object";
+        }
+        Memory* redMemory = new Memory();
+        if (!redMemory) {
+            qDebug() << "Failed to allocate memory for Memory object";
+            delete redBrain;
+        }
+        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents, GAME_FIELD_X, GAME_FIELD_Y, GAME_FIELD_WIDTH, GAME_FIELD_HEIGHT);
         redAgents.push_back(agent);
         connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-        connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
+        connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
     }
 }
 
@@ -328,15 +356,32 @@ void GameField::updateAgentPositions() {
     std::vector<std::pair<int, int>> redPositions;
 
     for (Agent* agent : blueAgents) {
-        bluePositions.emplace_back(agent->getX(), agent->getY());
-    }
-    for (Agent* agent : redAgents) {
-        redPositions.emplace_back(agent->getX(), agent->getY());
+        int x = agent->getX();
+        int y = agent->getY();
+
+        // Check if the agent's position is within the main game field boundaries
+        if (x >= GAME_FIELD_X && x < GAME_FIELD_X + GAME_FIELD_WIDTH / 2 && y >= GAME_FIELD_Y && y < GAME_FIELD_Y + GAME_FIELD_HEIGHT) {
+            bluePositions.push_back(std::make_pair(x, y));
+        }
     }
 
     for (Agent* agent : blueAgents) {
         agent->update(redPositions, redAgents);
     }
+    for (Agent* agent : redAgents) {
+        int x = agent->getX();
+        int y = agent->getY();
+
+        // Check if the agent's position is within the main game field boundaries
+        if (x >= GAME_FIELD_X + GAME_FIELD_WIDTH / 2 && x < GAME_FIELD_X + GAME_FIELD_WIDTH && y >= GAME_FIELD_Y && y < GAME_FIELD_Y + GAME_FIELD_HEIGHT) {
+            redPositions.push_back(std::make_pair(x, y));
+        }
+    }
+
+    for (Agent* agent : blueAgents) {
+        agent->update(redPositions, redAgents);
+    }
+
     for (Agent* agent : redAgents) {
         agent->update(bluePositions, blueAgents);
     }
@@ -346,7 +391,7 @@ void GameField::updateAgentItemsPositions() {
     for (Agent* agent : blueAgents) {
         QGraphicsItem* item = getAgentItem(agent);
         if (item) {
-            item->setPos(agent->getX() * cellSize, agent->getY() * cellSize);
+            item->setPos(agent->getX(), agent->getY());
             QGraphicsPolygonItem* agentItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item);
             if (agentItem) {
                 if (agent->isTagged()) {
@@ -375,7 +420,7 @@ void GameField::updateAgentItemsPositions() {
     for (Agent* agent : redAgents) {
         QGraphicsItem* item = getAgentItem(agent);
         if (item) {
-            item->setPos(agent->getX() * cellSize, agent->getY() * cellSize);
+            item->setPos(agent->getX(), agent->getY());
             QGraphicsPolygonItem* agentItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item);
             if (agentItem) {
                 if (agent->isTagged()) {
@@ -520,34 +565,34 @@ void GameField::updateTimeDisplay() {
 void GameField::setupScene() {
     scene = new QGraphicsScene(this);
     setScene(scene);
-    setSceneRect(0, 0, 800, 600);
+    setSceneRect(0, 0, gameFieldWidth, gameFieldHeight);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    // Calculate the number of rows and columns based on the scene size and cell size
-    rows = sceneRect().height() / cellSize;
-    cols = sceneRect().width() / cellSize;
+    // Calculate the number of rows and columns based on the game field dimensions and cell size
+    rows = gameFieldHeight / cellSize;
+    cols = gameFieldWidth / cellSize;
 
     // Create the grid based on the calculated rows and columns
     grid.resize(rows, std::vector<int>(cols, 0));
 
+    // Update the rows and cols variables used by the agents
+    rows = grid.size();
+    cols = grid[0].size();
+
     // Add team areas
-    QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
+    QGraphicsRectItem* blueArea = new QGraphicsRectItem(0, 0, gameFieldWidth / 2, gameFieldHeight);
     blueArea->setPen(QPen(Qt::blue, 2));
     scene->addItem(blueArea);
 
-    QGraphicsRectItem* redArea = new QGraphicsRectItem(410, 10, 390, 580);
+    QGraphicsRectItem* redArea = new QGraphicsRectItem(gameFieldWidth / 2, 0, gameFieldWidth / 2, gameFieldHeight);
     redArea->setPen(QPen(Qt::red, 2));
     scene->addItem(redArea);
 
-    // Add flags
-    QGraphicsEllipseItem* blueFlag = new QGraphicsEllipseItem(70, 290, 20, 20);
-    blueFlag->setBrush(Qt::blue);
-    scene->addItem(blueFlag);
-
-    QGraphicsEllipseItem* redFlag = new QGraphicsEllipseItem(710, 290, 20, 20);
-    redFlag->setBrush(Qt::red);
-    scene->addItem(redFlag);
+    // Add the game field
+    QGraphicsRectItem* gameField = new QGraphicsRectItem(0, 0, gameFieldWidth, gameFieldHeight);
+    gameField->setPen(QPen(Qt::black, 2));
+    scene->addItem(gameField);
 
     // Add team zones (circular areas around flags)
     QGraphicsEllipseItem* blueZone = new QGraphicsEllipseItem(40, 260, 80, 80);
@@ -566,26 +611,43 @@ void GameField::setupScene() {
 
     // Add agents
     for (Agent* agent : blueAgents) {
-        QGraphicsPolygonItem* blueAgent = new QGraphicsPolygonItem();
-        QPolygon blueTriangle;
-        int x = agent->getX() * cellSize;
-        int y = agent->getY() * cellSize;
-        blueTriangle << QPoint(x, y) << QPoint(x - 10, y + 20) << QPoint(x + 10, y + 20);
-        blueAgent->setPolygon(blueTriangle);
+        QGraphicsEllipseItem* blueAgent = new QGraphicsEllipseItem();
+        int x = agent->getX();
+        int y = agent->getY();
+        blueAgent->setRect(x - 10, y - 10, 20, 20);
         blueAgent->setBrush(Qt::blue);
         blueAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
         scene->addItem(blueAgent);
     }
 
     for (Agent* agent : redAgents) {
-        QGraphicsPolygonItem* redAgent = new QGraphicsPolygonItem();
-        QPolygon redTriangle;
-        int x = agent->getX() * cellSize;
-        int y = agent->getY() * cellSize;
-        redTriangle << QPoint(x, y) << QPoint(x - 10, y + 20) << QPoint(x + 10, y + 20);
-        redAgent->setPolygon(redTriangle);
+        QGraphicsEllipseItem* redAgent = new QGraphicsEllipseItem();
+        int x = agent->getX();
+        int y = agent->getY();
+        redAgent->setRect(x - 10, y - 10, 20, 20);
         redAgent->setBrush(Qt::red);
         redAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
         scene->addItem(redAgent);
     }
+}
+
+GameField::~GameField() {
+    delete pathfinder;
+
+    for (Agent* agent : blueAgents) {
+        delete agent->getBrain();
+        delete agent->getMemory();
+        delete agent;
+    }
+    
+    for (Agent* agent : redAgents) {
+        delete agent->getBrain();
+        delete agent->getMemory();
+        delete agent;
+    }
+
+    blueAgents.clear();
+    redAgents.clear();
+
+    delete gameManager;
 }

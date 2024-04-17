@@ -4,12 +4,21 @@
 #include <QAction>
 #include <QInputDialog>
 
-Driver::Driver(QWidget* parent) : QMainWindow(parent) {
-    int rows = 10;
-    int cols = 10;
+Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
+    int cellSize = 20;
+    int gameFieldWidth = 790;
+    int gameFieldHeight = 580;
+
+    int rows = gameFieldHeight / cellSize;
+    int cols = gameFieldWidth / cellSize;
+
+    // Initialize the grid vector with the correct dimensions
     std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
 
-    GameField* gameField = new GameField(this, grid);
+
+    gameField = new GameField(this, gameFieldWidth, gameFieldHeight, cellSize);
+    gameManager = gameField->getGameManager();
+
     setCentralWidget(gameField);
 
     // Create the menu bar

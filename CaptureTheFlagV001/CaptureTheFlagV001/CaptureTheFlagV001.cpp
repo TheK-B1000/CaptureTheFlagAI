@@ -6,11 +6,11 @@ CaptureTheFlagV001::CaptureTheFlagV001(QWidget* parent)
 {
     ui.setupUi(this);
 
-    int rows = 10;
-    int cols = 10;
-    std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
+    int gameFieldWidth = 790;
+    int gameFieldHeight = 580;
+    int cellSize = 20;
 
-    gameField = new GameField(this, grid);
+    gameField = new GameField(this, gameFieldWidth, gameFieldHeight, cellSize);
     setCentralWidget(gameField);
 }
 
