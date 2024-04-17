@@ -160,15 +160,7 @@ bool Agent::isOpponentCarryingFlag() const {
 }
 
 std::pair<int, int> Agent::getEnemyFlagPosition() const {
-    QGraphicsView* view = gameManager->getGameView();
-    QGraphicsPolygonItem* enemyFlag = (side == "blue") ? view->findChild<GameField*>()->redFlag : view->findChild<GameField*>()->blueFlag;
-
-    if (enemyFlag) {
-        QPointF enemyFlagPosition = enemyFlag->boundingRect().center();
-        return std::make_pair(static_cast<int>(enemyFlagPosition.x()), static_cast<int>(enemyFlagPosition.y()));
-    }
-
-    return std::make_pair(-1, -1);
+    return gameManager->getEnemyFlagPosition(side);
 }
 
 float Agent::distanceToEnemyFlag() const {
