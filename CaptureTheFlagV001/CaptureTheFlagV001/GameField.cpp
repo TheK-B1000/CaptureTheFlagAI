@@ -16,13 +16,22 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     // Create the Pathfinder object
-    rows = grid.size();
+        rows = grid.size();
     cols = grid[0].size();
     if (rows == 0 || cols == 0) {
         // Handle the case when the grid is empty
         qDebug() << "Error: Grid is empty";
         return;
     }
+
+    // Print the grid representation for debugging
+    qDebug() << "Grid representation:";
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            qDebug() << grid[i][j];
+        }
+    }
+
     pathfinder = new Pathfinder(grid);
     cellSize = 40;
     taggingDistance = 100; // Set the tagging distance
@@ -650,6 +659,13 @@ void GameField::setupScene() {
 
     gameManager->setFlagPosition("blue", blueFlagPosition.x(), blueFlagPosition.y());
     gameManager->setFlagPosition("red", redFlagPosition.x(), redFlagPosition.y());
+
+    // Get the team zone positions and print them for debugging
+    std::pair<int, int> blueTeamZonePosition = gameManager->getTeamZonePosition("blue");
+    std::pair<int, int> redTeamZonePosition = gameManager->getTeamZonePosition("red");
+
+    qDebug() << "Blue team zone position:" << blueTeamZonePosition.first << blueTeamZonePosition.second;
+    qDebug() << "Red team zone position:" << redTeamZonePosition.first << redTeamZonePosition.second;
 
     // Add agents
     for (Agent* agent : blueAgents) {

@@ -37,8 +37,6 @@ std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, in
         std::pair<int, int> current = openSet.top().second;
         openSet.pop();
 
-        qDebug() << "Pathfinder: Current node:" << current.first << current.second;
-
         if (current.first == goalX && current.second == goalY) {
             qDebug() << "Pathfinder: Goal reached!";
 
@@ -56,8 +54,6 @@ std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, in
 
             return path;
         }
-
-        qDebug() << "Pathfinder: Exploring neighbors...";
 
         for (const auto& neighbor : getNeighbors(current.first, current.second)) {
             double tentativeGScore = gScore[current] + 1;

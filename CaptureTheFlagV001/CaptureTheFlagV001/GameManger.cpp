@@ -28,7 +28,13 @@ void GameManager::setFlagPosition(const std::string& side, int x, int y) {
 }
 
 std::pair<int, int> GameManager::getEnemyFlagPosition(const std::string& side) const {
-    return (side == "blue") ? redFlagPosition : blueFlagPosition;
+    std::pair<int, int> enemyFlagPosition = (side == "blue") ? redFlagPosition : blueFlagPosition;
+
+    // Clamp the enemy flag position within the game field boundaries
+    int clampedX = std::max(5, std::min(enemyFlagPosition.first, 794));
+    int clampedY = std::max(10, std::min(enemyFlagPosition.second, 589));
+
+    return std::make_pair(clampedX, clampedY);
 }
 
 std::pair<int, int> GameManager::getTeamZonePosition(const std::string& side) const {

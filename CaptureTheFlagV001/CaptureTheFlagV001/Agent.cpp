@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <iostream>
 #include <QDebug>
+#include <QGraphicsView>
 
 Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
     : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
@@ -159,7 +160,15 @@ bool Agent::isOpponentCarryingFlag() const {
 }
 
 std::pair<int, int> Agent::getEnemyFlagPosition() const {
-    return gameManager->getEnemyFlagPosition(side);
+    QGraphicsView* view = gameManager->getGameView();
+    QGraphicsPolygonItem* enemyFlag = (side == "blue") ? view->findChild<GameField*>()->redFlag : view->findChild<GameField*>()->blueFlag;
+
+    if (enemyFlag) {
+        QPointF enemyFlagPosition = enemyFlag->boundingRect().center();
+        return std::make_pair(static_cast<int>(enemyFlagPosition.x()), static_cast<int>(enemyFlagPosition.y()));
+    }
+
+    return std::make_pair(-1, -1);
 }
 
 float Agent::distanceToEnemyFlag() const {
@@ -181,23 +190,23 @@ float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& othe
 }
 
 void Agent::exploreField() {
-    // the path vector contains the sequence of positions that the agent should follow
     if (path.empty()) {
         std::pair<int, int> targetPosition;
 
         do {
             targetPosition = pathfinder->getRandomFreePosition();
-        } while (grid[targetPosition.second][targetPosition.first] == 1);
+        } while (targetPosition.first < 5 || targetPosition.first > 794 || targetPosition.second < 10 || targetPosition.second > 589);
 
         path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
     }
 
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
+        int newX = std::max(5, std::min(nextStep.first, 794));
+        int newY = std::max(10, std::min(nextStep.second, 589));
 
-        // Update the agent's position with the next step's coordinates
-        x = nextStep.first;
-        y = nextStep.second;
+        x = newX;
+        y = newY;
         path.erase(path.begin());
     }
 }
@@ -213,8 +222,8 @@ void Agent::moveTowardsEnemyFlag() {
             std::pair<int, int> nextStep = path.front();
 
             // Update the agent's position with the next step's coordinates
-            x = nextStep.first;
-            y = nextStep.second;
+            x = std::max(5, std::min(nextStep.first, 794));
+            y = std::max(10, std::min(nextStep.second, 589));
             path.erase(path.begin());
 
             if (distanceToEnemyFlag() <= 10) {
