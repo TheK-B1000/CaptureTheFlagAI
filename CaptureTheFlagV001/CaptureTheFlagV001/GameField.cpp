@@ -33,7 +33,7 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
     }
 
     pathfinder = new Pathfinder(grid);
-    cellSize = 40;
+    cellSize = 20;
     taggingDistance = 100; // Set the tagging distance
 
     // Initialize the GameManager after setting rows and cols
@@ -140,11 +140,11 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 1);
             y = QRandomGenerator::global()->bounded(1, rows - 3);
         } while (grid[y][x] == 1);
-        Brain* redBrain = new Brain(); // Create a brain for each blue agent
+        Brain* redBrain = new Brain(); // Create a brain for each red agent
         if (!redBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
         }
-        Memory* redMemory = new Memory(); // Create a memory for each blue agent
+        Memory* redMemory = new Memory(); // Create a memory for each red agent
         if (!redMemory) {
             qDebug() << "Failed to allocate memory for Memory object";
             delete redBrain;
@@ -589,6 +589,12 @@ void GameField::updateTimeDisplay() {
     timeRemainingTextItem->setPlainText("Time Remaining: " + QString::number(timeRemaining));
 }
 
+std::pair<int, int> GameField::pixelToGrid(int pixelX, int pixelY) {
+    int gridX = pixelX / cellSize;
+    int gridY = pixelY / cellSize;
+    return { gridX, gridY };
+}
+
 void GameField::setupScene() {
     scene = new QGraphicsScene(this);
     setScene(scene);
@@ -674,8 +680,11 @@ void GameField::setupScene() {
     QPointF blueFlagPosition = blueFlag->boundingRect().center();
     QPointF redFlagPosition = redFlag->boundingRect().center();
 
-    gameManager->setFlagPosition("blue", blueFlagPosition.x(), blueFlagPosition.y());
-    gameManager->setFlagPosition("red", redFlagPosition.x(), redFlagPosition.y());
+    std::pair<int, int> blueFlagGridPosition = pixelToGrid(blueFlagPosition.x(), blueFlagPosition.y());
+    std::pair<int, int> redFlagGridPosition = pixelToGrid(redFlagPosition.x(), redFlagPosition.y());
+
+    gameManager->setFlagPosition("blue", blueFlagGridPosition.first, blueFlagGridPosition.second);
+    gameManager->setFlagPosition("red", redFlagGridPosition.first, redFlagGridPosition.second);
 
     // Get the team zone positions and print them for debugging
     std::pair<int, int> blueTeamZonePosition = gameManager->getTeamZonePosition("blue");

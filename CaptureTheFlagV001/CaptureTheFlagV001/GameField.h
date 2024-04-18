@@ -60,6 +60,7 @@ private:
     QGraphicsTextItem* redScoreTextItem;
     int cols;
     std::vector<std::vector<int>> grid;
+    std::pair<int, int> pixelToGrid(int pixelX, int pixelY);
     int rows;
     GameManager* gameManager;
     QGraphicsRectItem* gameField;
@@ -75,6 +76,7 @@ private:
     void updateTimeDisplay();
     void stopGame();
     void declareWinner();
+
 };
 
 #endif
