@@ -5,18 +5,11 @@
 #include <QInputDialog>
 
 Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
-    int cellSize = 20;
-    int gameFieldWidth = 790;
-    int gameFieldHeight = 580;
-
-    int rows = gameFieldHeight / cellSize;
-    int cols = gameFieldWidth / cellSize;
-
-    // Initialize the grid vector with the correct dimensions
+    int rows = 10;
+    int cols = 10;
     std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
 
-
-    gameField = new GameField(this, gameFieldWidth, gameFieldHeight, cellSize);
+    gameField = new GameField(this, grid);
     gameManager = gameField->getGameManager();
 
     setCentralWidget(gameField);
@@ -43,17 +36,20 @@ Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
 }
 
 void Driver::runTestCase1() {
+    gameManager->resetGame();
     gameField->runTestCase1();
 }
 
 void Driver::runTestCase2() {
+    gameManager->resetGame();
     bool ok;
     int agentCount = QInputDialog::getInt(this, "Test Case 2", "Enter the number of agents:", 8, 1, 100, 1, &ok);
     if (ok) {
-        gameField->runTestCase2(agentCount);
+        gameField->runTestCase2(agentCount, gameField->getGameManager());
     }
 }
 
 void Driver::runTestCase3() {
+    gameManager->resetGame();
     gameField->runTestCase3();
 }

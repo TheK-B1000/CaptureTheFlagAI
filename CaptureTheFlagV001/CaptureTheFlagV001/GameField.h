@@ -5,6 +5,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsItem>
 #include <QTimer>
+
 #include "Agent.h"
 #include "Pathfinder.h"
 
@@ -12,12 +13,13 @@ class GameField : public QGraphicsView {
     Q_OBJECT
 
 public:
-    GameField(QWidget* parent, int gameFieldWidth, int gameFieldHeight, int cellSize);
+    GameField(QWidget* parent, const std::vector<std::vector<int>>& grid);
     ~GameField();
 
     // Getter functions
     const std::vector<Agent*>& getBlueAgents() const { return blueAgents; }
     const std::vector<Agent*>& getRedAgents() const { return redAgents; }
+    GameManager* getGameManager() const { return gameManager; }
     int getCols() const { return cols; }
     const std::vector<std::vector<int>>& getGrid() const { return grid; }
     int getRows() const { return rows; }
@@ -26,10 +28,11 @@ public:
     QGraphicsScene* getScene() const { return scene; }
 
     void clearAgents();
-    void setupAgents(int blueCount, int redCount, int cols);
+    void setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager);
     bool isValidPosition(int x, int y);
+
     void runTestCase1();
-    void runTestCase2(int agentCount);
+    void runTestCase2(int agentCount, GameManager* gameManager);
     void runTestCase3();
 
 private slots:
@@ -39,10 +42,6 @@ private slots:
 
 private:
     void setupScene();
-    static const int GAME_FIELD_X = 5;
-    static const int GAME_FIELD_Y = 10;
-    static const int GAME_FIELD_WIDTH = 790;
-    static const int GAME_FIELD_HEIGHT = 580;
     QGraphicsPolygonItem* findFlagItem(const QString& team);
     void updateGridFromZones(QGraphicsEllipseItem* blueZone, QGraphicsEllipseItem* redZone);
 
@@ -51,8 +50,6 @@ private:
     std::vector<Agent*> redAgents;
     Pathfinder* pathfinder;
     int cellSize;
-    int gameFieldWidth;
-    int gameFieldHeight;
     int blueScore;
     int redScore;
     int timeRemaining;
@@ -64,6 +61,8 @@ private:
     int cols;
     std::vector<std::vector<int>> grid;
     int rows;
+    GameManager* gameManager;
+    QGraphicsRectItem* gameField;
 
     void updateAgentPositions();
     void updateAgentItemsPositions();

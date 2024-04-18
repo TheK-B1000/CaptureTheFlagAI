@@ -7,6 +7,7 @@
 #include "Pathfinder.h"
 #include "Brain.h"
 #include "Memory.h"
+#include "GameManager.h"
 #include <QObject>
 
 enum class AgentMode {
@@ -19,7 +20,6 @@ const int GRID_SIZE = 100; // Grid size for discretization
 
 class Agent : public QObject {
     Q_OBJECT
-
 private:
     int x, y;
     int cols, rows;
@@ -27,6 +27,7 @@ private:
     Pathfinder* pathfinder;
     Brain* brain;
     Memory* memory;
+    GameManager* gameManager;
     bool _isCarryingFlag;
     bool _isTagged;
     int cooldownTimer;
@@ -40,19 +41,16 @@ private:
     int stuckTimer;
     static const int stuckThreshold = 5;
     std::string side;
-    int gameFieldX;
-    int gameFieldY;
-    int gameFieldWidth;
-    int gameFieldHeight;
-    int SIDE_BOUNDARY_X;
 
 public:
-    Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents, int gameFieldX, int gameFieldY, int gameFieldWidth, int gameFieldHeight);
+    Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents);
+
     void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents);
     void updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void handleFlagInteractions();
     void handleCooldownTimer();
     bool isOpponentCarryingFlag() const;
+    std::pair<int, int> getEnemyFlagPosition() const;
     float distanceToEnemyFlag() const;
     float distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
     float distanceTo(const Agent* otherAgent) const;
@@ -65,13 +63,12 @@ public:
     bool grabFlag();
     bool captureFlag();
     void resetFlag();
-    bool checkInHomeZone() const;
+    bool checkInTeamZone() const;
     std::pair<int, int> getDirectionToOpponent(int opponentX, int opponentY) const;
     void setIsTagged(bool val);
     bool isTagged() const;
     bool isCarryingFlag() const;
     void setCarryingFlag(bool carrying);
-    std::pair<int, int> getHomeZonePosition() const;
     int getX() const { return x; }
     int getY() const { return y; }
     void setX(int newX);
@@ -83,7 +80,6 @@ public:
     Brain* getBrain() const { return brain; }
     Memory* getMemory() const { return memory; }
     bool isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents);
-    bool isWithinField(int x, int y) const;
     std::string getSide() const { return side; }
     float getTaggingDistance() const { return taggingDistance; }
     int getCooldownTimer() const { return cooldownTimer; }

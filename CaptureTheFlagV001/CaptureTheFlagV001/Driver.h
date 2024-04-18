@@ -5,6 +5,7 @@
 #include <QMenu>
 
 class GameField;
+class GameManager; 
 
 class Driver : public QMainWindow {
     Q_OBJECT
@@ -18,8 +19,9 @@ private slots:
     void runTestCase3();
 
 private:
-    GameField* gameField;
     QMenu* testCaseMenu;
+    GameField* gameField;
+    GameManager* gameManager;  
 };
 
 #endif
