@@ -71,7 +71,7 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
     scene->addItem(timeRemainingTextItem);
 
     // Start a timer to update agents
-    int gameDuration = 300; // 5 minutes in seconds
+    int gameDuration = 600; // 10 minutes in seconds
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
@@ -686,12 +686,15 @@ void GameField::setupScene() {
     gameManager->setFlagPosition("blue", blueFlagGridPosition.first, blueFlagGridPosition.second);
     gameManager->setFlagPosition("red", redFlagGridPosition.first, redFlagGridPosition.second);
 
-    // Get the team zone positions and print them for debugging
-    std::pair<int, int> blueTeamZonePosition = gameManager->getTeamZonePosition("blue");
-    std::pair<int, int> redTeamZonePosition = gameManager->getTeamZonePosition("red");
+    // Update the GameManager with the team zone positions
+    QPointF blueZoneCenter = blueZone->rect().center();
+    QPointF redZoneCenter = redZone->rect().center();
 
-    qDebug() << "Blue team zone position:" << blueTeamZonePosition.first << blueTeamZonePosition.second;
-    qDebug() << "Red team zone position:" << redTeamZonePosition.first << redTeamZonePosition.second;
+    std::pair<int, int> blueZoneGridPosition = pixelToGrid(blueZoneCenter.x(), blueZoneCenter.y());
+    std::pair<int, int> redZoneGridPosition = pixelToGrid(redZoneCenter.x(), redZoneCenter.y());
+
+    gameManager->setTeamZonePosition("blue", blueZoneGridPosition.first, blueZoneGridPosition.second);
+    gameManager->setTeamZonePosition("red", redZoneGridPosition.first, redZoneGridPosition.second);
 
     // Add agents
     for (Agent* agent : blueAgents) {
