@@ -3,7 +3,9 @@
 GameManager::GameManager(int cols, int rows)
     : cols(cols), rows(rows),
     blueFlagPosition(0, rows / 2),
-    redFlagPosition(cols - 1, rows / 2) {}
+    redFlagPosition(cols - 1, rows / 2),
+    blueTeamZonePosition(0, rows / 2),
+    redTeamZonePosition(cols - 1, rows / 2) {}
 
 std::pair<int, int> GameManager::getFlagPosition(const std::string& side) const {
     if (side == "blue") {
@@ -29,11 +31,9 @@ void GameManager::setFlagPosition(const std::string& side, int x, int y) {
 
 std::pair<int, int> GameManager::getEnemyFlagPosition(const std::string& side) const {
     std::pair<int, int> enemyFlagPosition = (side == "blue") ? redFlagPosition : blueFlagPosition;
-
     // Clamp the enemy flag position within the game field boundaries
-    int clampedX = std::max(5, std::min(enemyFlagPosition.first, 794));
-    int clampedY = std::max(10, std::min(enemyFlagPosition.second, 589));
-
+    int clampedX = std::max(0, std::min(enemyFlagPosition.first, cols - 1));
+    int clampedY = std::max(0, std::min(enemyFlagPosition.second, rows - 1));
     return std::make_pair(clampedX, clampedY);
 }
 
@@ -52,6 +52,15 @@ std::pair<int, int> GameManager::getTeamZonePosition(const std::string& side) co
     teamZoneCenterY = std::max(teamZoneRadius, std::min(teamZoneCenterY, rows - teamZoneRadius - 1));
 
     return std::make_pair(teamZoneCenterX, teamZoneCenterY);
+}
+
+void GameManager::setTeamZonePosition(const std::string& side, int x, int y) {
+    if (side == "blue") {
+        blueTeamZonePosition = std::make_pair(x, y);
+    }
+    else if (side == "red") {
+        redTeamZonePosition = std::make_pair(x, y);
+    }
 }
 
 void GameManager::resetGame() {
