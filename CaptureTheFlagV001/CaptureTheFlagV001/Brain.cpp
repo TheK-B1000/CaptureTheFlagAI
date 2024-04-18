@@ -7,35 +7,34 @@ BrainDecision Brain::makeDecision(bool hasFlag, bool opponentHasFlag, bool isTag
         return BrainDecision::ReturnToHomeZone;
     }
 
-    if (hasFlag && inHomeZone) {
-        if (!flagCaptured) {
-            flagCaptured = true;
-            score++;
+    if (hasFlag) {
+        if (inHomeZone) {
+            if (!flagCaptured) {
+                flagCaptured = true;
+                score++;
+            }
+            return BrainDecision::CaptureFlag;
         }
-        return BrainDecision::CaptureFlag;
+        else {
+            return BrainDecision::ReturnToHomeZone;
+        }
     }
 
-    if (distanceToFlag <= proximityThreshold && !hasFlag && !opponentHasFlag) {
+    if (!hasFlag && !opponentHasFlag) {
         return BrainDecision::GrabFlag;
     }
 
-    if (distanceToNearestEnemy <= proximityThreshold && !isTagged && opponentHasFlag) {
-        return BrainDecision::TagEnemy;
+    if (!hasFlag && opponentHasFlag) {
+        if (distanceToNearestEnemy <= proximityThreshold && !isTagged) {
+            return BrainDecision::TagEnemy;
+        }
+        else {
+            return BrainDecision::RecoverFlag;
+        }
     }
 
-    float flagCaptureScore = evaluateFlagCapture(hasFlag, distanceToFlag);
-    float flagRecoveryScore = evaluateFlagRecovery(opponentHasFlag, distanceToNearestEnemy);
-    float exploreScore = evaluateExplore(hasFlag, opponentHasFlag, inHomeZone);
-
-    if (flagCaptureScore >= flagRecoveryScore && flagCaptureScore >= exploreScore) {
-        return BrainDecision::CaptureFlag;
-    }
-    else if (flagRecoveryScore >= flagCaptureScore && flagRecoveryScore >= exploreScore) {
-        return BrainDecision::RecoverFlag;
-    }
-    else {
-        return BrainDecision::Explore;
-    }
+    // If none of the above conditions are met, explore the field
+    return BrainDecision::Explore;
 }
 
 float Brain::evaluateFlagCapture(bool hasFlag, float distanceToFlag) {

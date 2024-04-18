@@ -1,56 +1,75 @@
 #include "Agent.h"
 #include "Brain.h"
 #include "Memory.h"
+#include "GameManager.h"
 #include <cmath>
 #include <filesystem>
 #include <iostream>
+#include <QDebug>
+#include <QGraphicsView>
 
-Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
-    : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), blueAgents(blueAgents), redAgents(redAgents),
+Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
+    : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
     _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true), previousX(x), previousY(y), stuckTimer(0) {}
 
 void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
+    // Updates memory of agent with position of other agents
     updateMemory(otherAgentsPositions);
 
+    // is ai agent activated
     if (!_isEnabled) {
         return;
     }
 
+    // is ai agent tagged
     if (_isTagged) {
-        if (checkInHomeZone()) {
+        if (checkInTeamZone()) {
+            // at base no longer tagged
             _isTagged = false;
         }
         else {
+            // go to base to remove tag
             moveTowardsHomeZone();
             return;
         }
     }
 
+    // if tagged while holding the flag the flag is reset
     if (_isCarryingFlag && _isTagged) {
         resetFlag();
     }
 
-    BrainDecision decision = brain->makeDecision(_isCarryingFlag, isOpponentCarryingFlag(), _isTagged, checkInHomeZone(), distanceToEnemyFlag(), distanceToNearestEnemy(otherAgentsPositions));
+    // Ai makes decisions
+    qDebug() << "Agent at (" << x << ", " << y << ") making decision...";
+    BrainDecision decision = brain->makeDecision(_isCarryingFlag, isOpponentCarryingFlag(), _isTagged, checkInTeamZone(), distanceToEnemyFlag(), distanceToNearestEnemy(otherAgentsPositions));
 
     switch (decision) {
     case BrainDecision::Explore:
+        qDebug() << "Exploring field";
         exploreField();
         break;
     case BrainDecision::GrabFlag:
+        qDebug() << "Moving towards enemy flag";
         moveTowardsEnemyFlag();
         break;
     case BrainDecision::CaptureFlag:
+        qDebug() << "Moving towards home zone";
         moveTowardsHomeZone();
         break;
     case BrainDecision::RecoverFlag:
+        qDebug() << "Chasing opponent with flag";
         chaseOpponentWithFlag(otherAgentsPositions);
         break;
     case BrainDecision::TagEnemy:
+        qDebug() << "Tagging enemy";
         tagEnemy(otherAgents);
         break;
     case BrainDecision::ReturnToHomeZone:
+        qDebug() << "Returning to home zone";
         moveTowardsHomeZone();
-    break;    default:
+        break;    
+    default:
+        qDebug() << "Exploring field";
         exploreField();
         break;
     }
@@ -82,28 +101,40 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
 
 
 void Agent::updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
+    // checks every ai agents position
     for (const auto& position : otherAgentsPositions) {
-        const auto& opponentInfo = memory->getOpponentInfo(position.first, position.second);
-        memory->updateOpponentInfo(position.first, position.second, std::get<0>(opponentInfo), std::get<1>(opponentInfo));
+        // retrieve opponent info from the map
+        const auto& opponentInfoIt = memory->getOpponentInfo().find(position);
+        if (opponentInfoIt != memory->getOpponentInfo().end()) {
+            // retrieve the tuple value from the map
+            const auto& opponentInfo = opponentInfoIt->second;
+            // update memory with info
+            memory->updateOpponentInfo(position.first, position.second, std::get<0>(opponentInfo), std::get<1>(opponentInfo).first, std::get<1>(opponentInfo).second);
+        }
     }
 }
 
 void Agent::handleFlagInteractions() {
+    // checks if not carrying flag, not tagges, and is within a 10 unit distance or in opponent team zone
     if (!_isCarryingFlag && !_isTagged && distanceToEnemyFlag() <= 10) {
+        // checks to make sure no team ai agent is already holding a flag
         if (!isTeamCarryingFlag(blueAgents, redAgents)) {
             grabFlag();
         }
     }
 
-    if (_isCarryingFlag && checkInHomeZone()) {
+    // if agent has flag and in home team zone
+    if (_isCarryingFlag && checkInTeamZone()) {
         captureFlag();
     }
 
+    // checks if ai agent is tagged while carrying the flag
     if (_isCarryingFlag && _isTagged) {
         resetFlag();
     }
 }
 
+// Checks if team is already holding the enemy flag
 bool Agent::isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents) {
     for (const Agent* teammate : (side == "blue" ? blueAgents : redAgents)) {
         if (teammate != this && teammate->isCarryingFlag()) {
@@ -113,6 +144,7 @@ bool Agent::isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std:
     return false;
 }
 
+// prevent ai agents from spam tagging
 void Agent::handleCooldownTimer() {
     if (cooldownTimer > 0) {
         --cooldownTimer;
@@ -121,19 +153,27 @@ void Agent::handleCooldownTimer() {
 
 bool Agent::isOpponentCarryingFlag() const {
     const auto& opponentInfoMap = memory->getOpponentInfo();
+    // iterate over opponenet info to find an opponent carrying the flag
     return std::any_of(opponentInfoMap.begin(), opponentInfoMap.end(), [](const auto& entry) {
         return std::get<0>(entry.second);
         });
 }
 
+std::pair<int, int> Agent::getEnemyFlagPosition() const {
+    return gameManager->getEnemyFlagPosition(side);
+}
+
 float Agent::distanceToEnemyFlag() const {
-    int enemyFlagX = (side == "blue") ? cols - 1 : 0;
-    int enemyFlagY = rows / 2;
-    return std::hypot(enemyFlagX - x, enemyFlagY - y) * FIELD_WIDTH / GRID_SIZE;
+    // Get the current position of the enemy flag
+    std::pair<int, int> enemyFlagPos = getEnemyFlagPosition();
+
+    // Calculate the distance between the agent and the enemy flag
+    return std::hypot(enemyFlagPos.first - x, enemyFlagPos.second - y) * FIELD_WIDTH / GRID_SIZE;
 }
 
 float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const {
     float minDistance = std::numeric_limits<float>::max();
+    // checks the distance between each enemy
     for (const auto& position : otherAgentsPositions) {
         float distance = std::hypot(position.first - x, position.second - y);
         minDistance = std::min(minDistance, distance);
@@ -144,36 +184,18 @@ float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& othe
 void Agent::exploreField() {
     if (path.empty()) {
         std::pair<int, int> targetPosition;
+
         do {
             targetPosition = pathfinder->getRandomFreePosition();
-        } while (
-            targetPosition.first < 0 || targetPosition.first >= cols ||
-            targetPosition.second < 0 || targetPosition.second >= rows ||
-            grid[targetPosition.second][targetPosition.first] == 1
-            );
+        } while (targetPosition.first < 5 || targetPosition.first > 794 || targetPosition.second < 10 || targetPosition.second > 589);
+
         path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
     }
+
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
-        x = nextStep.first;
-        y = nextStep.second;
-        path.erase(path.begin());
-    }
-}
-
-void Agent::moveTowardsEnemyFlag() {
-    int enemyFlagX = (side == "blue") ? cols - 1 : 0;
-    int enemyFlagY = rows / 2;
-    enemyFlagX = std::max(0, std::min(enemyFlagX, cols - 1));
-    enemyFlagY = std::max(0, std::min(enemyFlagY, rows - 1));
-    path = pathfinder->findPath(x, y, enemyFlagX, enemyFlagY);
-    if (!path.empty()) {
-        std::pair<int, int> nextStep = path.front();
-        int newX = nextStep.first;
-        int newY = nextStep.second;
-
-        newX = std::max(0, std::min(newX, cols - 1));
-        newY = std::max(0, std::min(newY, rows - 1));
+        int newX = std::max(5, std::min(nextStep.first, 794));
+        int newY = std::max(10, std::min(nextStep.second, 589));
 
         x = newX;
         y = newY;
@@ -181,19 +203,43 @@ void Agent::moveTowardsEnemyFlag() {
     }
 }
 
+void Agent::moveTowardsEnemyFlag() {
+    std::pair<int, int> flagPos = gameManager->getEnemyFlagPosition(side);
+
+    // Check if the enemy flag position is within the game field boundaries
+    if (flagPos.first >= 5 && flagPos.first <= 794 && flagPos.second >= 10 && flagPos.second <= 589) {
+        path = pathfinder->findPath(x, y, flagPos.first, flagPos.second);
+
+        if (!path.empty()) {
+            std::pair<int, int> nextStep = path.front();
+
+            // Update the agent's position with the next step's coordinates
+            x = std::max(5, std::min(nextStep.first, 794));
+            y = std::max(10, std::min(nextStep.second, 589));
+            path.erase(path.begin());
+
+            if (distanceToEnemyFlag() <= 10) {
+                grabFlag();
+            }
+        }
+    }
+    else {
+        // Handle the case when the enemy flag position is outside the game field boundaries
+        qDebug() << "Enemy flag position is outside the game field boundaries!";
+    }
+}
+
 void Agent::moveTowardsHomeZone() {
-    int homeX = (side == "blue") ? 0 : cols - 1;
-    int homeY = rows / 2;
-    homeX = std::max(0, std::min(homeX, cols - 1));
-    homeY = std::max(0, std::min(homeY, rows - 1));
+    std::pair<int, int> homePos = gameManager->getTeamZonePosition(side);
+    int homeX = std::max(5, std::min(homePos.first, 794));
+    int homeY = std::max(10, std::min(homePos.second, 589));
+
     path = pathfinder->findPath(x, y, homeX, homeY);
+
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
-        int newX = nextStep.first;
-        int newY = nextStep.second;
-
-        newX = std::max(0, std::min(newX, cols - 1));
-        newY = std::max(0, std::min(newY, rows - 1));
+        int newX = std::max(5, std::min(nextStep.first, 794));
+        int newY = std::max(10, std::min(nextStep.second, 589));
 
         x = newX;
         y = newY;
@@ -206,9 +252,9 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     double minTimeSinceLastSeen = std::numeric_limits<double>::max();
 
     for (const auto& position : otherAgentsPositions) {
-        const auto& opponentInfo = memory->getOpponentInfo(position.first, position.second);
-        if (std::get<0>(opponentInfo)) {
-            double timeSinceLastSeen = memory->getTimeSinceLastSeen(position.first, position.second).count();
+        bool hasFlag = memory->hasOpponentFlag(position.first, position.second);
+        if (hasFlag) {
+            double timeSinceLastSeen = memory->getTimeSinceLastSeen(position.first, position.second);
             if (timeSinceLastSeen < minTimeSinceLastSeen) {
                 minTimeSinceLastSeen = timeSinceLastSeen;
                 opponentWithFlag = position;
@@ -217,28 +263,18 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     }
 
     if (opponentWithFlag.first != -1 && opponentWithFlag.second != -1) {
-        const auto& opponentInfo = memory->getOpponentInfo(opponentWithFlag.first, opponentWithFlag.second);
-        std::pair<int, int> direction = std::get<1>(opponentInfo);
-        int predictedX = opponentWithFlag.first + direction.first;
-        int predictedY = opponentWithFlag.second + direction.second;
+        int opponentX = std::max(5, std::min(opponentWithFlag.first, 794));
+        int opponentY = std::max(10, std::min(opponentWithFlag.second, 589));
+        path = pathfinder->findPath(x, y, opponentX, opponentY);
 
-        predictedX = std::max(0, std::min(predictedX, cols - 1));
-        predictedY = std::max(0, std::min(predictedY, rows - 1));
+        if (!path.empty()) {
+            std::pair<int, int> nextStep = path.front();
+            int newX = std::max(5, std::min(nextStep.first, 794));
+            int newY = std::max(10, std::min(nextStep.second, 589));
 
-        if (grid[predictedY][predictedX] != 1) {
-            path = pathfinder->findPath(x, y, predictedX, predictedY);
-            if (!path.empty()) {
-                std::pair<int, int> nextStep = path.front();
-                int newX = nextStep.first;
-                int newY = nextStep.second;
-
-                newX = std::max(0, std::min(newX, cols - 1));
-                newY = std::max(0, std::min(newY, rows - 1));
-
-                x = newX;
-                y = newY;
-                path.erase(path.begin());
-            }
+            x = newX;
+            y = newY;
+            path.erase(path.begin());
         }
     }
 }
@@ -251,6 +287,7 @@ void Agent::tagEnemy(std::vector<Agent*>& otherAgents) {
     Agent* nearestEnemy = nullptr;
     float minDistance = std::numeric_limits<float>::max();
 
+    // checks over each agent
     for (Agent* agent : otherAgents) {
         if (agent->side != side && !agent->isTagged() && agent->isOnEnemySide()) {
             float distance = std::hypot(agent->x - x, agent->y - y);
@@ -280,7 +317,7 @@ bool Agent::grabFlag() {
 }
 
 bool Agent::captureFlag() {
-    if (_isCarryingFlag && checkInHomeZone() && !_isTagged) {
+    if (_isCarryingFlag && checkInTeamZone() && !_isTagged) {
         _isCarryingFlag = false;
 
         if (side == "blue") {
@@ -307,27 +344,17 @@ void Agent::resetFlag() {
     }
 }
 
-bool Agent::checkInHomeZone() const {
-    if (side == "blue") {
-        int homeZoneX = 0;
-        int homeZoneY = 0;
-        int homeZoneWidth = cols / 2;
-        int homeZoneHeight = rows;
-        return (x >= homeZoneX && x < homeZoneX + homeZoneWidth && y >= homeZoneY && y < homeZoneY + homeZoneHeight);
-    }
-    else {
-        int homeZoneX = cols / 2;
-        int homeZoneY = 0;
-        int homeZoneWidth = cols / 2;
-        int homeZoneHeight = rows;
-        return (x >= homeZoneX && x < homeZoneX + homeZoneWidth && y >= homeZoneY && y < homeZoneY + homeZoneHeight);
-    }
-}
+bool Agent::checkInTeamZone() const {
+    int teamZoneRadius = 40; 
 
-std::pair<int, int> Agent::getHomeZonePosition() const {
-    int homeX = (side == "blue") ? 0 : cols - 1;
-    int homeY = rows / 2;
-    return std::make_pair(homeX, homeY);
+    // Get the current flag position based on the agent's side
+    std::pair<int, int> flagPosition = gameManager->getFlagPosition(side);
+
+    // Calculate the distance between the agent and the flag position
+    int distanceToFlag = std::sqrt(std::pow(x - flagPosition.first, 2) + std::pow(y - flagPosition.second, 2));
+
+    // Check if the agent is within the team zone
+    return distanceToFlag <= teamZoneRadius;
 }
 
 void Agent::setX(int newX) {
