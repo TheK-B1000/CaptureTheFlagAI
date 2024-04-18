@@ -62,6 +62,7 @@ private:
     std::vector<std::vector<int>> grid;
     int rows;
     GameManager* gameManager;
+    QGraphicsRectItem* gameField;
 
     void updateAgentPositions();
     void updateAgentItemsPositions();

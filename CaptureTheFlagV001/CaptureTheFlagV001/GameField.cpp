@@ -596,16 +596,33 @@ void GameField::setupScene() {
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    // Calculate the number of rows and columns based on the scene size and cell size
-    rows = std::ceil(sceneRect().height() / static_cast<double>(cellSize));
-    cols = std::ceil(sceneRect().width() / static_cast<double>(cellSize));
+    // Add the combined game field of blue area and red area
+    this->gameField = new QGraphicsRectItem(5, 10, 790, 580);
+    this->gameField->setPen(QPen(Qt::black, 2));
+    scene->addItem(this->gameField);
+
+    // Calculate the number of rows and columns based on the combined game field dimensions
+    int gameFieldWidth = this->gameField->rect().width();
+    int gameFieldHeight = this->gameField->rect().height();
+    rows = std::ceil(gameFieldHeight / static_cast<double>(cellSize));
+    cols = std::ceil(gameFieldWidth / static_cast<double>(cellSize));
 
     // Create the grid based on the calculated rows and columns
     grid.resize(rows, std::vector<int>(cols, 0));
 
-    // Update the rows and cols variables used by the agents
-    rows = grid.size();
-    cols = grid[0].size();
+    // Draw grid lines
+    QPen gridPen(Qt::black, 1, Qt::DotLine);
+    for (int i = 0; i <= rows; ++i) {
+        QGraphicsLineItem* horizontalLine = new QGraphicsLineItem(0, i * cellSize, gameFieldWidth, i * cellSize);
+        horizontalLine->setPen(gridPen);
+        horizontalLine->setParentItem(this->gameField);
+    }
+    for (int j = 0; j <= cols; ++j) {
+        QGraphicsLineItem* verticalLine = new QGraphicsLineItem(j * cellSize, 0, j * cellSize, gameFieldHeight);
+        verticalLine->setPen(gridPen);
+        verticalLine->setParentItem(this->gameField);
+    }
+
 
     // Add team areas fields
     QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
