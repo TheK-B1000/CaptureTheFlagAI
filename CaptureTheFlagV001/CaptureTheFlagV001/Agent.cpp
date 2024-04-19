@@ -151,6 +151,43 @@ void Agent::handleCooldownTimer() {
     }
 }
 
+bool Agent::isInFavorablePosition() {
+    // Set a fixed proximity threshold value
+    const float proximityThreshold = 10.0f;
+
+    // Check if the agent is close enough to the enemy flag
+    float distanceToFlag = distanceToEnemyFlag();
+    if (distanceToFlag <= proximityThreshold) {
+        return true;
+    }
+
+    // Check if there are no opponents nearby
+    float distanceToNearestEnemy = this->distanceToNearestEnemy(getEnemyAgentPositions());
+    if (distanceToNearestEnemy > proximityThreshold) {
+        return true;
+    }
+
+    // If none of the above conditions are met, the agent is not in a favorable position
+    return false;
+}
+
+std::vector<std::pair<int, int>> Agent::getEnemyAgentPositions() const {
+    std::vector<std::pair<int, int>> enemyPositions;
+
+    const auto& opponentInfoMap = memory->getOpponentInfo();
+    for (const auto& entry : opponentInfoMap) {
+        const auto& position = entry.first;
+        double timeSinceLastSeen = memory->getTimeSinceLastSeen(position.first, position.second);
+
+        // Consider the opponent's position if it was seen recently
+        if (timeSinceLastSeen <= 5.0) {  // Adjust the time threshold as needed
+            enemyPositions.push_back(position);
+        }
+    }
+
+    return enemyPositions;
+}
+
 bool Agent::isOpponentCarryingFlag() const {
     const auto& opponentInfoMap = memory->getOpponentInfo();
     // iterate over opponenet info to find an opponent carrying the flag
@@ -202,25 +239,29 @@ void Agent::exploreField() {
         path.erase(path.begin());
     }
 }
-
 void Agent::moveTowardsEnemyFlag() {
     std::pair<int, int> flagPos = gameManager->getEnemyFlagPosition(side);
 
     // Check if the enemy flag position is within the game field boundaries
-    if (flagPos.first >= 5 && flagPos.first <= 794 && flagPos.second >= 10 && flagPos.second <= 589) {
+    if (flagPos.first >= 0 && flagPos.first < cols && flagPos.second >= 0 && flagPos.second < rows) {
         path = pathfinder->findPath(x, y, flagPos.first, flagPos.second);
 
         if (!path.empty()) {
             std::pair<int, int> nextStep = path.front();
 
-            // Update the agent's position with the next step's coordinates
-            x = std::max(5, std::min(nextStep.first, 794));
-            y = std::max(10, std::min(nextStep.second, 589));
+            // Update the agent's position with the next step's grid coordinates
+            x = std::max(0, std::min(nextStep.first, cols - 1));
+            y = std::max(0, std::min(nextStep.second, rows - 1));
             path.erase(path.begin());
 
-            if (distanceToEnemyFlag() <= 10) {
+            if (distanceToEnemyFlag() <= 1) {  // Assuming 1 grid distance as proximity for flag capture
                 grabFlag();
             }
+        }
+        else {
+            // No valid path found towards the enemy flag
+            // Start exploring the field until a valid path is found
+            exploreField();
         }
     }
     else {
@@ -229,18 +270,17 @@ void Agent::moveTowardsEnemyFlag() {
     }
 }
 
+
 void Agent::moveTowardsHomeZone() {
     std::pair<int, int> homePos = gameManager->getTeamZonePosition(side);
-    int homeX = std::max(5, std::min(homePos.first, 794));
-    int homeY = std::max(10, std::min(homePos.second, 589));
+    int homeX = std::max(0, std::min(homePos.first, pathfinder->getCols() - 1));
+    int homeY = std::max(0, std::min(homePos.second, pathfinder->getRows() - 1));
 
     path = pathfinder->findPath(x, y, homeX, homeY);
-
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
-        int newX = std::max(5, std::min(nextStep.first, 794));
-        int newY = std::max(10, std::min(nextStep.second, 589));
-
+        int newX = std::max(0, std::min(nextStep.first, pathfinder->getCols() - 1));
+        int newY = std::max(0, std::min(nextStep.second, pathfinder->getRows() - 1));
         x = newX;
         y = newY;
         path.erase(path.begin());
@@ -263,15 +303,14 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     }
 
     if (opponentWithFlag.first != -1 && opponentWithFlag.second != -1) {
-        int opponentX = std::max(5, std::min(opponentWithFlag.first, 794));
-        int opponentY = std::max(10, std::min(opponentWithFlag.second, 589));
-        path = pathfinder->findPath(x, y, opponentX, opponentY);
+        int opponentX = std::max(0, std::min(opponentWithFlag.first, pathfinder->getCols() - 1));
+        int opponentY = std::max(0, std::min(opponentWithFlag.second, pathfinder->getRows() - 1));
 
+        path = pathfinder->findPath(x, y, opponentX, opponentY);
         if (!path.empty()) {
             std::pair<int, int> nextStep = path.front();
-            int newX = std::max(5, std::min(nextStep.first, 794));
-            int newY = std::max(10, std::min(nextStep.second, 589));
-
+            int newX = std::max(0, std::min(nextStep.first, pathfinder->getCols() - 1));
+            int newY = std::max(0, std::min(nextStep.second, pathfinder->getRows() - 1));
             x = newX;
             y = newY;
             path.erase(path.begin());

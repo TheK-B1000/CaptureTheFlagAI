@@ -5,8 +5,8 @@
 #include <QInputDialog>
 
 Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
-    int rows = 10;
-    int cols = 10;
+    int rows = 15;
+    int cols = 20;
     std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
 
     gameField = new GameField(this, grid);
