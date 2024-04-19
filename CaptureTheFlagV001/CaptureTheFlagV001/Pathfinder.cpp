@@ -86,10 +86,7 @@ std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y) {
         if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
             // Check if the neighbor position is not occupied by another AI agent
             if (std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(newX, newY)) == dynamicObstacles.end()) {
-                // Check if the neighbor position is not a flag or a team zone
-                if (!gameManager.isFlag(newX, newY) && !gameManager.isTeamZone(newX, newY)) {
-                    neighbors.push_back({ newX, newY });
-                }
+                neighbors.push_back({ newX, newY });
             }
         }
     }

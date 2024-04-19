@@ -123,7 +123,7 @@ void Agent::updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPosi
 }
 
 void Agent::handleFlagInteractions() {
-    // checks if not carrying flag, not tagges, and is within a 10 unit distance or in opponent team zone
+    // checks if not carrying flag, not tagged, and is within a 10 unit distance or in opponent team zone
     if (!_isCarryingFlag && !_isTagged && distanceToEnemyFlag() <= 10) {
         // checks to make sure no team ai agent is already holding a flag
         if (!isTeamCarryingFlag(blueAgents, redAgents)) {
