@@ -227,52 +227,49 @@ float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& othe
 }
 
 void Agent::exploreField() {
-    // Check if the agent has reached the current target position
-    if (!path.empty() && (x != path.back().first || y != path.back().second)) {
-        // Agent has not reached the target position, continue following the current path
+    // Generate a new random target position within the game field boundaries
+    int minX = 0, minY = 0, maxX = cols - 1, maxY = rows - 1;
+    std::pair<int, int> targetPosition;
+
+    do {
+        targetPosition = pathfinder->getRandomFreePosition();
+    } while (targetPosition.first < minX || targetPosition.first > maxX ||
+        targetPosition.second < minY || targetPosition.second > maxY);
+
+    // Calculate a new path to the target position
+    path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
+
+    // Follow the path until the agent reaches the target position
+    while (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
         x = nextStep.first;
         y = nextStep.second;
         path.erase(path.begin());
     }
-    else {
-        // Agent has reached the target position or the path is empty
-        // Generate a new random target position within the game field boundaries
-        int minX = 0, minY = 0, maxX = cols - 1, maxY = rows - 1;
-        std::pair<int, int> targetPosition;
-        do {
-            targetPosition = pathfinder->getRandomFreePosition();
-        } while (targetPosition.first < minX || targetPosition.first > maxX ||
-            targetPosition.second < minY || targetPosition.second > maxY);
 
-        // Calculate a new path to the target position
-        path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
-    }
+    // After exploring, move towards the enemy flag
+    moveTowardsEnemyFlag();
 }
 
 void Agent::moveTowardsEnemyFlag() {
     std::pair<int, int> flagPos = gameManager->getEnemyFlagPosition(side);
 
     // Check if the enemy flag position is within the game field boundaries
-    if (flagPos.first >= 0 && flagPos.second >= 0) {
+    if (flagPos.first >= 0 && flagPos.second >= 0 && flagPos.first < cols && flagPos.second < rows) {
         path = pathfinder->findPath(x, y, flagPos.first, flagPos.second);
 
-        if (!path.empty()) {
-            std::pair<int, int> nextStep = path.front();
 
-            // Update the agent's position with the next step's grid coordinates
+        // Follow the path until the agent reaches the flag or the path is empty
+        while (!path.empty()) {
+            std::pair<int, int> nextStep = path.front();
             x = std::max(0, std::min(nextStep.first, cols - 1));
             y = std::max(0, std::min(nextStep.second, rows - 1));
             path.erase(path.begin());
 
-            if (distanceToEnemyFlag() <= 1) {  // Assuming 1 grid distance as proximity for flag capture
+            if (distanceToEnemyFlag() <= 1) {
                 grabFlag();
+                break;
             }
-        }
-        else {
-            // No valid path found towards the enemy flag
-            // Start exploring the field until a valid path is found
-            exploreField();
         }
     }
     else {

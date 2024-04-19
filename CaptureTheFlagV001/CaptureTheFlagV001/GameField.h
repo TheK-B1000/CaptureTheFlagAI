@@ -13,7 +13,7 @@ class GameField : public QGraphicsView {
     Q_OBJECT
 
 public:
-    GameField(QWidget* parent, const std::vector<std::vector<int>>& grid);
+    GameField(QWidget* parent, const std::vector<std::vector<int>>& grid, int rows, int cols, int cellSize);
     ~GameField();
 
     // Getter functions
@@ -26,6 +26,8 @@ public:
     Pathfinder* getPathfinder() const { return pathfinder; }
     int getTaggingDistance() const { return taggingDistance; }
     QGraphicsScene* getScene() const { return scene; }
+    QGraphicsRectItem* blueArea;
+    QGraphicsRectItem* redArea;
 
     void clearAgents();
     void setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager);

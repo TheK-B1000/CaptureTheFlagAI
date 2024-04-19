@@ -8,9 +8,8 @@
 #include <QFont>
 #include "GameManager.h"
 
-GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
-    : QGraphicsView(parent), grid(grid) {
-
+GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid, int rows, int cols, int cellSize)
+    : QGraphicsView(parent), grid(grid), rows(rows), cols(cols), cellSize(cellSize), blueArea(nullptr), redArea(nullptr) {
     setRenderHint(QPainter::Antialiasing);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -39,10 +38,10 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
     // Initialize the GameManager after setting rows and cols
     gameManager = new GameManager(cols, rows);
 
-    setupAgents(4, 4, cols, gameManager);
-
     // Set up the scene
     setupScene();
+
+    setupAgents(4, 4, cols, gameManager);
 
     // Set up the score displays
     QGraphicsTextItem* blueScoreText = new QGraphicsTextItem();
@@ -110,14 +109,17 @@ void GameField::clearAgents() {
     }
     redAgents.clear();
 }
+
 void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager) {
     // Initialize blue agents
     for (int i = 0; i < blueCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(1, cols / 2 - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 3);
-        } while (grid[y][x] == 1);
+            x = QRandomGenerator::global()->bounded(5, 405);
+            y = QRandomGenerator::global()->bounded(10, 590);
+        } while (!blueArea->contains(QPointF(x, y)));
+
+        std::pair<int, int> gridPos = pixelToGrid(x, y);
         Brain* blueBrain = new Brain(); // Create a brain for each blue agent
         if (!blueBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
@@ -127,7 +129,7 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             qDebug() << "Failed to allocate memory for Memory object";
             delete blueBrain;
         }
-        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
+        Agent* agent = new Agent(gridPos.first, gridPos.second, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
         blueAgents.push_back(agent);
         connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
         connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
@@ -137,9 +139,11 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
     for (int i = 0; i < redCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 3);
-        } while (grid[y][x] == 1);
+            x = QRandomGenerator::global()->bounded(410, 800);
+            y = QRandomGenerator::global()->bounded(10, 590);
+        } while (!redArea->contains(QPointF(x, y)));
+
+        std::pair<int, int> gridPos = pixelToGrid(x, y);
         Brain* redBrain = new Brain(); // Create a brain for each red agent
         if (!redBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
@@ -149,13 +153,12 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             qDebug() << "Failed to allocate memory for Memory object";
             delete redBrain;
         }
-        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
+        Agent* agent = new Agent(gridPos.first, gridPos.second, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
         redAgents.push_back(agent);
         connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
         connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 }
-
 void GameField::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
 }
@@ -645,13 +648,13 @@ void GameField::setupScene() {
     }
 
     // Add team areas fields
-    QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
-    blueArea->setPen(QPen(Qt::blue, 2));
-    scene->addItem(blueArea);
+    this->blueArea = new QGraphicsRectItem(5, 10, 400, 580); // Assign to member variable
+    this->blueArea->setPen(QPen(Qt::blue, 2));
+    scene->addItem(this->blueArea);
 
-    QGraphicsRectItem* redArea = new QGraphicsRectItem(410, 10, 390, 580);
-    redArea->setPen(QPen(Qt::red, 2));
-    scene->addItem(redArea);
+    this->redArea = new QGraphicsRectItem(410, 10, 390, 580); // Assign to member variable
+    this->redArea->setPen(QPen(Qt::red, 2));
+    scene->addItem(this->redArea);
 
     // Add the combined game field of blue area and red area
     QGraphicsRectItem* gameField = new QGraphicsRectItem(5, 10, 790, 580);
@@ -697,6 +700,9 @@ void GameField::setupScene() {
     std::pair<int, int> blueFlagGridPosition = pixelToGrid(blueFlagPosition.x(), blueFlagPosition.y());
     std::pair<int, int> redFlagGridPosition = pixelToGrid(redFlagPosition.x(), redFlagPosition.y());
 
+    qDebug() << "Blue flag grid position: (" << blueFlagGridPosition.first << ", " << blueFlagGridPosition.second << ")";
+    qDebug() << "Red flag grid position: (" << redFlagGridPosition.first << ", " << redFlagGridPosition.second << ")";
+
     gameManager->setFlagPosition("blue", blueFlagGridPosition.first, blueFlagGridPosition.second);
     gameManager->setFlagPosition("red", redFlagGridPosition.first, redFlagGridPosition.second);
 
@@ -734,6 +740,8 @@ void GameField::setupScene() {
 
 GameField::~GameField() {
     delete pathfinder;
+    delete blueArea;
+    delete redArea;
 
     for (Agent* agent : blueAgents) {
         delete agent->getBrain();
