@@ -622,13 +622,27 @@ void GameField::setupScene() {
         QGraphicsLineItem* horizontalLine = new QGraphicsLineItem(0, i * cellSize, gameFieldWidth, i * cellSize);
         horizontalLine->setPen(gridPen);
         horizontalLine->setParentItem(this->gameField);
+
+        // Add row numbers
+        QGraphicsTextItem* rowNumber = new QGraphicsTextItem(QString::number(i));
+        rowNumber->setDefaultTextColor(Qt::black);
+        rowNumber->setFont(QFont("Arial", 10));
+        rowNumber->setPos(-20, i * cellSize);
+        scene->addItem(rowNumber);
+
     }
     for (int j = 0; j <= cols; ++j) {
         QGraphicsLineItem* verticalLine = new QGraphicsLineItem(j * cellSize, 0, j * cellSize, gameFieldHeight);
         verticalLine->setPen(gridPen);
         verticalLine->setParentItem(this->gameField);
-    }
 
+        // Add column numbers
+        QGraphicsTextItem* columnNumber = new QGraphicsTextItem(QString::number(j));
+        columnNumber->setDefaultTextColor(Qt::black);
+        columnNumber->setFont(QFont("Arial", 10));
+        columnNumber->setPos(j * cellSize, -20);
+        scene->addItem(columnNumber);
+    }
 
     // Add team areas fields
     QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
