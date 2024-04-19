@@ -20,6 +20,7 @@ const int GRID_SIZE = 100; // Grid size for discretization
 
 class Agent : public QObject {
     Q_OBJECT
+
 private:
     int x, y;
     int cols, rows;
@@ -53,6 +54,9 @@ public:
     std::pair<int, int> getEnemyFlagPosition() const;
     float distanceToEnemyFlag() const;
     float distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
+    std::pair<int, int> gridToPixel(int gridX, int gridY);
+    std::pair<int, int> pixelToGrid(int pixelX, int pixelY);
+    bool isValidGridPosition(int gridX, int gridY);
     float distanceTo(const Agent* otherAgent) const;
     void exploreField();
     void moveTowardsEnemyFlag();
@@ -85,6 +89,8 @@ public:
     int getCooldownTimer() const { return cooldownTimer; }
     int getCooldownDuration() const { return cooldownDuration; }
     void setCooldownTimer(int value) { cooldownTimer = value; }
+    bool isInFavorablePosition();
+    std::vector<std::pair<int, int>> getEnemyAgentPositions() const;
 
 signals:
     void blueFlagCaptured();
