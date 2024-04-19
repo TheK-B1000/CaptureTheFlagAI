@@ -2,8 +2,8 @@
 
 GameManager::GameManager(int cols, int rows)
     : cols(cols), rows(rows),
-    blueFlagPosition(0, rows / 2),
-    redFlagPosition(cols - 1, rows / 2),
+    blueFlagPosition(3, 14), // Set the correct initial position for the blue flag
+    redFlagPosition(35, 14), // Set the correct initial position for the red flag
     blueTeamZonePosition(0, rows / 2),
     redTeamZonePosition(cols - 1, rows / 2) {}
 
@@ -30,13 +30,8 @@ void GameManager::setFlagPosition(const std::string& side, int x, int y) {
 }
 
 std::pair<int, int> GameManager::getEnemyFlagPosition(const std::string& side) const {
-    std::pair<int, int> enemyFlagPosition = (side == "blue") ? redFlagPosition : blueFlagPosition;
-    // Clamp the enemy flag position within the game field boundaries
-    int clampedX = std::max(0, std::min(enemyFlagPosition.first, cols - 1));
-    int clampedY = std::max(0, std::min(enemyFlagPosition.second, rows - 1));
-    return std::make_pair(clampedX, clampedY);
+    return (side == "blue") ? redFlagPosition : blueFlagPosition;
 }
-
 std::pair<int, int> GameManager::getTeamZonePosition(const std::string& side) const {
     int teamZoneRadius = 40; // Radius of the team zone (half of the team zone diameter)
 

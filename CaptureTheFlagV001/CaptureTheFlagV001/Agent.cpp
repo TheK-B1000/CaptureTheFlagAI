@@ -227,31 +227,34 @@ float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& othe
 }
 
 void Agent::exploreField() {
-    if (path.empty()) {
-        std::pair<int, int> targetPosition;
-
-        do {
-            targetPosition = pathfinder->getRandomFreePosition();
-        } while (targetPosition.first < 5 || targetPosition.first > 794 || targetPosition.second < 10 || targetPosition.second > 589);
-
-        path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
-    }
-
-    if (!path.empty()) {
+    // Check if the agent has reached the current target position
+    if (!path.empty() && (x != path.back().first || y != path.back().second)) {
+        // Agent has not reached the target position, continue following the current path
         std::pair<int, int> nextStep = path.front();
-        int newX = std::max(5, std::min(nextStep.first, 794));
-        int newY = std::max(10, std::min(nextStep.second, 589));
-
-        x = newX;
-        y = newY;
+        x = nextStep.first;
+        y = nextStep.second;
         path.erase(path.begin());
     }
+    else {
+        // Agent has reached the target position or the path is empty
+        // Generate a new random target position within the game field boundaries
+        int minX = 0, minY = 0, maxX = cols - 1, maxY = rows - 1;
+        std::pair<int, int> targetPosition;
+        do {
+            targetPosition = pathfinder->getRandomFreePosition();
+        } while (targetPosition.first < minX || targetPosition.first > maxX ||
+            targetPosition.second < minY || targetPosition.second > maxY);
+
+        // Calculate a new path to the target position
+        path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
+    }
 }
+
 void Agent::moveTowardsEnemyFlag() {
     std::pair<int, int> flagPos = gameManager->getEnemyFlagPosition(side);
 
     // Check if the enemy flag position is within the game field boundaries
-    if (flagPos.first >= 0 && flagPos.first < cols && flagPos.second >= 0 && flagPos.second < rows) {
+    if (flagPos.first >= 0 && flagPos.second >= 0) {
         path = pathfinder->findPath(x, y, flagPos.first, flagPos.second);
 
         if (!path.empty()) {
