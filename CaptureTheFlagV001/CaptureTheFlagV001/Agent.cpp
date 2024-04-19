@@ -21,6 +21,14 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         return;
     }
 
+    if (!_isCarryingFlag && !_isTagged && distanceToEnemyFlag() <= 10) {
+        std::cout << "Agent " << side << " is attempting to grab the enemy flag." << std::endl;
+    }
+
+    if (_isCarryingFlag && checkInTeamZone()) {
+        std::cout << "Agent " << side << " is attempting to capture the flag." << std::endl;
+    }
+
     // is ai agent tagged
     if (_isTagged) {
         if (checkInTeamZone()) {

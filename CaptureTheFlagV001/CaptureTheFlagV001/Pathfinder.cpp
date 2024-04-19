@@ -1,4 +1,5 @@
 #include "Pathfinder.h"
+#include "GameField.h"
 #include "Agent.h"
 #include <queue>
 #include <cmath>
@@ -76,13 +77,19 @@ std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y) {
     std::vector<std::pair<int, int>> neighbors;
     const int dx[] = { -1, 1, 0, 0 };
     const int dy[] = { 0, 0, -1, 1 };
+    GameManager gameManager(cols, rows);
 
     for (int i = 0; i < 4; ++i) {
         int newX = x + dx[i];
         int newY = y + dy[i];
-        if (newX >= 0 && newX < rows && newY >= 0 && newY < cols && grid[newX][newY] != 1) {
+
+        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+            // Check if the neighbor position is not occupied by another AI agent
             if (std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(newX, newY)) == dynamicObstacles.end()) {
-                neighbors.push_back({ newX, newY });
+                // Check if the neighbor position is not a flag or a team zone
+                if (!gameManager.isFlag(newX, newY) && !gameManager.isTeamZone(newX, newY)) {
+                    neighbors.push_back({ newX, newY });
+                }
             }
         }
     }

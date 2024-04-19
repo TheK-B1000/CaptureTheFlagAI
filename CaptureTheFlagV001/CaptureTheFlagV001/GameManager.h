@@ -11,6 +11,8 @@ public:
     std::pair<int, int> getFlagPosition(const std::string& side) const;
     void setFlagPosition(const std::string& side, int x, int y);
     void setTeamZonePosition(const std::string& side, int x, int y);
+    bool isFlag(int x, int y) const;
+    bool isTeamZone(int x, int y) const;
     std::pair<int, int> getEnemyFlagPosition(const std::string& side) const;
     std::pair<int, int> getTeamZonePosition(const std::string& side) const;
 

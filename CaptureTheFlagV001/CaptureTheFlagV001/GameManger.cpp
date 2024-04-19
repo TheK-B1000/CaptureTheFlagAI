@@ -63,6 +63,27 @@ void GameManager::setTeamZonePosition(const std::string& side, int x, int y) {
     }
 }
 
+bool GameManager::isFlag(int x, int y) const {
+    return (x == blueFlagPosition.first && y == blueFlagPosition.second) ||
+        (x == redFlagPosition.first && y == redFlagPosition.second);
+}
+
+bool GameManager::isTeamZone(int x, int y) const {
+    const int teamZoneRadius = 40;
+    const std::pair<int, int> blueTeamZoneCenter = getTeamZonePosition("blue");
+    const std::pair<int, int> redTeamZoneCenter = getTeamZonePosition("red");
+
+    // Calculate squared distances from the position (x, y) to the team zone centers
+    const int blueDistSquared = (x - blueTeamZoneCenter.first) * (x - blueTeamZoneCenter.first) +
+        (y - blueTeamZoneCenter.second) * (y - blueTeamZoneCenter.second);
+    const int redDistSquared = (x - redTeamZoneCenter.first) * (x - redTeamZoneCenter.first) +
+        (y - redTeamZoneCenter.second) * (y - redTeamZoneCenter.second);
+
+    // Check if the position is within the radius of either team zone
+    return blueDistSquared <= teamZoneRadius * teamZoneRadius ||
+        redDistSquared <= teamZoneRadius * teamZoneRadius;
+}
+
 void GameManager::resetGame() {
     // Reset flag positions to their initial values
     blueFlagPosition = std::make_pair(0, rows / 2);
