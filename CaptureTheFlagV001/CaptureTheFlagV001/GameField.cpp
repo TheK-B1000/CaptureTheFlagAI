@@ -123,17 +123,10 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
         int x, y;
         do {
             x = QRandomGenerator::global()->bounded(1, cols / 2 - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 3);
-        } while (grid[y][x] == 1);
-        Brain* blueBrain = new Brain(); // Create a brain for each blue agent
-        if (!blueBrain) {
-            qDebug() << "Failed to allocate memory for Brain object";
-        }
-        Memory* blueMemory = new Memory(); // Create a memory for each blue agent
-        if (!blueMemory) {
-            qDebug() << "Failed to allocate memory for Memory object";
-            delete blueBrain;
-        }
+            y = QRandomGenerator::global()->bounded(1, rows - 1);
+        } while (grid[y][x] == 1 || (x < 1 || x >= cols / 2 - 1 || y < 1 || y >= rows - 1));
+        Brain* blueBrain = new Brain();
+        Memory* blueMemory = new Memory();
         Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
         blueAgents.push_back(agent);
         connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
@@ -144,18 +137,11 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
     for (int i = 0; i < redCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 2);
-            y = QRandomGenerator::global()->bounded(1, rows - 3);
-        } while (grid[y][x] == 1);
-        Brain* redBrain = new Brain(); // Create a brain for each red agent
-        if (!redBrain) {
-            qDebug() << "Failed to allocate memory for Brain object";
-        }
-        Memory* redMemory = new Memory(); // Create a memory for each red agent
-        if (!redMemory) {
-            qDebug() << "Failed to allocate memory for Memory object";
-            delete redBrain;
-        }
+            x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 1);
+            y = QRandomGenerator::global()->bounded(1, rows - 1);
+        } while (grid[y][x] == 1 || (x < cols / 2 + 1 || x >= cols - 1 || y < 1 || y >= rows - 1));
+        Brain* redBrain = new Brain();
+        Memory* redMemory = new Memory();
         Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
         redAgents.push_back(agent);
         connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
@@ -719,9 +705,9 @@ void GameField::setupScene() {
     // Add agents
     for (Agent* agent : blueAgents) {
         QGraphicsEllipseItem* blueAgent = new QGraphicsEllipseItem();
-        int x = agent->getX() * cellSize;
-        int y = agent->getY() * cellSize;
-        blueAgent->setRect(x - 10, y - 10, 20, 20);
+        int x = agent->getX() * cellSize + 5; // Adjust the x-coordinate to align with the game field
+        int y = agent->getY() * cellSize + 10; // Adjust the y-coordinate to align with the game field
+        blueAgent->setRect(x, y, cellSize, cellSize);
         blueAgent->setBrush(Qt::blue);
         blueAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
         scene->addItem(blueAgent);
@@ -729,9 +715,9 @@ void GameField::setupScene() {
 
     for (Agent* agent : redAgents) {
         QGraphicsEllipseItem* redAgent = new QGraphicsEllipseItem();
-        int x = agent->getX() * cellSize;
-        int y = agent->getY() * cellSize;
-        redAgent->setRect(x - 10, y - 10, 20, 20);
+        int x = agent->getX() * cellSize + 5; // Adjust the x-coordinate to align with the game field
+        int y = agent->getY() * cellSize + 10; // Adjust the y-coordinate to align with the game field
+        redAgent->setRect(x, y, cellSize, cellSize);
         redAgent->setBrush(Qt::red);
         redAgent->setData(0, QString::number(reinterpret_cast<quintptr>(agent)));
         scene->addItem(redAgent);
