@@ -8,21 +8,28 @@
 #include <QFont>
 #include "GameManager.h"
 
-GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
-    : QGraphicsView(parent), grid(grid) {
+GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& gridData)
+    : QGraphicsView(parent), grid(gridData) { 
 
     setRenderHint(QPainter::Antialiasing);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    // Create the Pathfinder object
-        rows = grid.size();
-    cols = grid[0].size();
-    if (rows == 0 || cols == 0) {
-        // Handle the case when the grid is empty
-        qDebug() << "Error: Grid is empty";
-        return;
+    // Check if the provided grid is empty or is the default 10 x 10
+    if (grid.empty() || grid[0].empty() || (grid.size() == 10 && grid[0].size() == 10)) {
+        // Set default values or handle the error
+        rows = 30; // Default value for rows
+        cols = 40; // Default value for cols
     }
+    else {
+        // Initialize rows and cols with the dimensions of the provided grid
+        rows = grid.size();
+        cols = grid[0].size();
+    }
+
+    // Resize the grid vector with the correct dimensions
+    std::vector<std::vector<int>> tempGrid(rows, std::vector<int>(cols, 0));
+    grid = tempGrid; // Assigning the temporary vector to the member grid
 
     // Print the grid representation for debugging
     qDebug() << "Grid representation:";
@@ -137,7 +144,7 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
     for (int i = 0; i < redCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 1);
+            x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 2);
             y = QRandomGenerator::global()->bounded(1, rows - 3);
         } while (grid[y][x] == 1);
         Brain* redBrain = new Brain(); // Create a brain for each red agent
@@ -622,20 +629,33 @@ void GameField::setupScene() {
         QGraphicsLineItem* horizontalLine = new QGraphicsLineItem(0, i * cellSize, gameFieldWidth, i * cellSize);
         horizontalLine->setPen(gridPen);
         horizontalLine->setParentItem(this->gameField);
+
+        // Add row numbers
+        QGraphicsTextItem* rowNumber = new QGraphicsTextItem(QString::number(i));
+        rowNumber->setDefaultTextColor(Qt::black);
+        rowNumber->setFont(QFont("Arial", 10));
+        rowNumber->setPos(-20, i * cellSize);
+        scene->addItem(rowNumber);
     }
     for (int j = 0; j <= cols; ++j) {
         QGraphicsLineItem* verticalLine = new QGraphicsLineItem(j * cellSize, 0, j * cellSize, gameFieldHeight);
         verticalLine->setPen(gridPen);
         verticalLine->setParentItem(this->gameField);
+
+        // Add column numbers
+        QGraphicsTextItem* columnNumber = new QGraphicsTextItem(QString::number(j));
+        columnNumber->setDefaultTextColor(Qt::black);
+        columnNumber->setFont(QFont("Arial", 10));
+        columnNumber->setPos(j * cellSize, -20);
+        scene->addItem(columnNumber);
     }
 
-
     // Add team areas fields
-    QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
+    QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580); // (Left: 0, Top: 0) to (Right: 19, Bottom: 28)
     blueArea->setPen(QPen(Qt::blue, 2));
     scene->addItem(blueArea);
 
-    QGraphicsRectItem* redArea = new QGraphicsRectItem(410, 10, 390, 580);
+    QGraphicsRectItem* redArea = new QGraphicsRectItem(410, 10, 390, 580); // (Left: 20, Top: 0) to (Right: 39, Bottom: 28)
     redArea->setPen(QPen(Qt::red, 2));
     scene->addItem(redArea);
 
@@ -645,14 +665,14 @@ void GameField::setupScene() {
     scene->addItem(gameField);
 
     // Add team zones (circular areas around flags)
-    QGraphicsEllipseItem* blueZone = new QGraphicsEllipseItem(50, 260, 80, 80);
+    QGraphicsEllipseItem* blueZone = new QGraphicsEllipseItem(50, 260, 80, 80); // Center: (2, 12)
     QPen bluePen(Qt::blue);
     bluePen.setWidth(3);
     blueZone->setPen(bluePen);
     blueZone->setBrush(Qt::NoBrush);
     scene->addItem(blueZone);
 
-    QGraphicsEllipseItem* redZone = new QGraphicsEllipseItem(690, 260, 80, 80);
+    QGraphicsEllipseItem* redZone = new QGraphicsEllipseItem(690, 260, 80, 80); // Center: (34, 12)
     QPen redPen(Qt::red);
     redPen.setWidth(3);
     redZone->setPen(redPen);
@@ -663,7 +683,7 @@ void GameField::setupScene() {
     QGraphicsPolygonItem* blueFlag = new QGraphicsPolygonItem();
     QPolygon blueTriangle;
     qreal blueFlagCenter = blueZone->rect().center().y();
-    blueTriangle << QPoint(70, blueFlagCenter - 20) << QPoint(80, blueFlagCenter) << QPoint(60, blueFlagCenter);
+    blueTriangle << QPoint(70, blueFlagCenter - 20) << QPoint(80, blueFlagCenter) << QPoint(60, blueFlagCenter); // (3, 12)
     blueFlag->setPolygon(blueTriangle);
     blueFlag->setBrush(Qt::blue);
     scene->addItem(blueFlag);
@@ -671,7 +691,7 @@ void GameField::setupScene() {
     QGraphicsPolygonItem* redFlag = new QGraphicsPolygonItem();
     QPolygon redTriangle;
     qreal redFlagCenter = redZone->rect().center().y();
-    redTriangle << QPoint(710, redFlagCenter - 20) << QPoint(720, redFlagCenter) << QPoint(700, redFlagCenter);
+    redTriangle << QPoint(710, redFlagCenter - 20) << QPoint(720, redFlagCenter) << QPoint(700, redFlagCenter); // (35, 12)
     redFlag->setPolygon(redTriangle);
     redFlag->setBrush(Qt::red);
     scene->addItem(redFlag);
@@ -717,7 +737,6 @@ void GameField::setupScene() {
         scene->addItem(redAgent);
     }
 }
-
 GameField::~GameField() {
     delete pathfinder;
 
