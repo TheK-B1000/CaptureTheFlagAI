@@ -8,8 +8,8 @@
 #include <QFont>
 #include "GameManager.h"
 
-GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
-    : QGraphicsView(parent), grid(grid) {
+GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid, int rows, int cols, int cellSize)
+    : QGraphicsView(parent), grid(grid), rows(rows), cols(cols), cellSize(cellSize) {
 
     setRenderHint(QPainter::Antialiasing);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -110,25 +110,31 @@ void GameField::clearAgents() {
     }
     redAgents.clear();
 }
+
 void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager) {
     // Initialize blue agents
     for (int i = 0; i < blueCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(1, cols / 2 - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 3);
+            x = QRandomGenerator::global()->bounded(1, cols / 4); // Spawn in the first quarter of the grid
+            y = QRandomGenerator::global()->bounded(1, rows - 1);
         } while (grid[y][x] == 1);
-        Brain* blueBrain = new Brain(); // Create a brain for each blue agent
+
+        Brain* blueBrain = new Brain();
         if (!blueBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
         }
-        Memory* blueMemory = new Memory(); // Create a memory for each blue agent
+
+        Memory* blueMemory = new Memory();
         if (!blueMemory) {
             qDebug() << "Failed to allocate memory for Memory object";
             delete blueBrain;
         }
+
         Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
         blueAgents.push_back(agent);
+        grid[y][x] = 1;
+
         connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
         connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
     }
@@ -137,20 +143,25 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
     for (int i = 0; i < redCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 3);
+            x = QRandomGenerator::global()->bounded(3 * cols / 4, cols - 1); // Spawn in the last quarter of the grid
+            y = QRandomGenerator::global()->bounded(1, rows - 1);
         } while (grid[y][x] == 1);
-        Brain* redBrain = new Brain(); // Create a brain for each red agent
+
+        Brain* redBrain = new Brain();
         if (!redBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
         }
-        Memory* redMemory = new Memory(); // Create a memory for each red agent
+
+        Memory* redMemory = new Memory();
         if (!redMemory) {
             qDebug() << "Failed to allocate memory for Memory object";
             delete redBrain;
         }
+
         Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
         redAgents.push_back(agent);
+        grid[y][x] = 1;
+
         connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
         connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
@@ -676,36 +687,34 @@ void GameField::setupScene() {
     // Add flags
     QGraphicsPolygonItem* blueFlag = new QGraphicsPolygonItem();
     QPolygon blueTriangle;
-    qreal blueFlagCenter = blueZone->rect().center().y();
-    blueTriangle << QPoint(70, blueFlagCenter - 20) << QPoint(80, blueFlagCenter) << QPoint(60, blueFlagCenter);
+    QPointF blueFlagCenter = blueZone->rect().center();
+    blueTriangle << QPoint(blueFlagCenter.x() - 10, blueFlagCenter.y() - 20)
+        << QPoint(blueFlagCenter.x(), blueFlagCenter.y())
+        << QPoint(blueFlagCenter.x() + 10, blueFlagCenter.y() - 20);
     blueFlag->setPolygon(blueTriangle);
     blueFlag->setBrush(Qt::blue);
     scene->addItem(blueFlag);
 
     QGraphicsPolygonItem* redFlag = new QGraphicsPolygonItem();
     QPolygon redTriangle;
-    qreal redFlagCenter = redZone->rect().center().y();
-    redTriangle << QPoint(710, redFlagCenter - 20) << QPoint(720, redFlagCenter) << QPoint(700, redFlagCenter);
+    QPointF redFlagCenter = redZone->rect().center();
+    redTriangle << QPoint(redFlagCenter.x() - 10, redFlagCenter.y() - 20)
+        << QPoint(redFlagCenter.x(), redFlagCenter.y())
+        << QPoint(redFlagCenter.x() + 10, redFlagCenter.y() - 20);
     redFlag->setPolygon(redTriangle);
     redFlag->setBrush(Qt::red);
     scene->addItem(redFlag);
 
-    // Update the GameManager with the new flag positions
-    QPointF blueFlagPosition = blueFlag->boundingRect().center();
-    QPointF redFlagPosition = redFlag->boundingRect().center();
-
-    std::pair<int, int> blueFlagGridPosition = pixelToGrid(blueFlagPosition.x(), blueFlagPosition.y());
-    std::pair<int, int> redFlagGridPosition = pixelToGrid(redFlagPosition.x(), redFlagPosition.y());
+    // Update the GameManager with the flag positions
+    std::pair<int, int> blueFlagGridPosition = pixelToGrid(blueFlagCenter.x(), blueFlagCenter.y());
+    std::pair<int, int> redFlagGridPosition = pixelToGrid(redFlagCenter.x(), redFlagCenter.y());
 
     gameManager->setFlagPosition("blue", blueFlagGridPosition.first, blueFlagGridPosition.second);
     gameManager->setFlagPosition("red", redFlagGridPosition.first, redFlagGridPosition.second);
 
     // Update the GameManager with the team zone positions
-    QPointF blueZoneCenter = blueZone->rect().center();
-    QPointF redZoneCenter = redZone->rect().center();
-
-    std::pair<int, int> blueZoneGridPosition = pixelToGrid(blueZoneCenter.x(), blueZoneCenter.y());
-    std::pair<int, int> redZoneGridPosition = pixelToGrid(redZoneCenter.x(), redZoneCenter.y());
+    std::pair<int, int> blueZoneGridPosition = pixelToGrid(blueZone->rect().center().x(), blueZone->rect().center().y());
+    std::pair<int, int> redZoneGridPosition = pixelToGrid(redZone->rect().center().x(), redZone->rect().center().y());
 
     gameManager->setTeamZonePosition("blue", blueZoneGridPosition.first, blueZoneGridPosition.second);
     gameManager->setTeamZonePosition("red", redZoneGridPosition.first, redZoneGridPosition.second);

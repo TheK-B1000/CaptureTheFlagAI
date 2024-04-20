@@ -5,11 +5,17 @@
 #include <QInputDialog>
 
 Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
-    int rows = 15;
-    int cols = 20;
+    int gameFieldWidth = 800;
+    int gameFieldHeight = 600;
+    int cellSize = 20;
+
+    int rows = std::ceil(gameFieldHeight / static_cast<double>(cellSize));
+    int cols = std::ceil(gameFieldWidth / static_cast<double>(cellSize));
+
     std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
 
-    gameField = new GameField(this, grid);
+    gameField = new GameField(this, grid, rows, cols, cellSize);
+
     gameManager = gameField->getGameManager();
 
     setCentralWidget(gameField);

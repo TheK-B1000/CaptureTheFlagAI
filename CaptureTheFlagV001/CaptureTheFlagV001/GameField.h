@@ -13,7 +13,7 @@ class GameField : public QGraphicsView {
     Q_OBJECT
 
 public:
-    GameField(QWidget* parent, const std::vector<std::vector<int>>& grid);
+    GameField(QWidget* parent, const std::vector<std::vector<int>>& grid, int rows, int cols, int cellSize);
     ~GameField();
 
     // Getter functions
