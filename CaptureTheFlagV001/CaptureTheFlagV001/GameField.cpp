@@ -32,17 +32,25 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
         }
     }
 
-    pathfinder = new Pathfinder(grid);
     cellSize = 20;
     taggingDistance = 100; // Set the tagging distance
 
     // Initialize the GameManager after setting rows and cols
     gameManager = new GameManager(cols, rows);
 
-    setupAgents(4, 4, cols, gameManager);
-
     // Set up the scene
     setupScene();
+
+    // Create the Pathfinder object after setting rows and cols
+    pathfinder = new Pathfinder(grid, rows, cols);
+
+    qDebug() << "Grid dimensions:";
+    qDebug() << "Rows:" << grid.size();
+    for (int y = 0; y < grid.size(); y++) {
+        qDebug() << "Row" << y << "Cols:" << grid[y].size();
+    }
+
+    setupAgents(4, 4, cols, gameManager);
 
     // Set up the score displays
     QGraphicsTextItem* blueScoreText = new QGraphicsTextItem();
@@ -116,8 +124,11 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
         int x, y;
         do {
             x = QRandomGenerator::global()->bounded(1, cols / 2 - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 3);
-        } while (grid[y][x] == 1);
+            y = QRandomGenerator::global()->bounded(1, rows - 1);
+            if (x >= 0 && x < cols && y >= 0 && y < rows && grid[y][x] != 1) {
+                break;
+            }
+        } while (true);
         Brain* blueBrain = new Brain(); // Create a brain for each blue agent
         if (!blueBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
@@ -127,8 +138,9 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             qDebug() << "Failed to allocate memory for Memory object";
             delete blueBrain;
         }
-        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
+        Agent* agent = new Agent(x, y, "blue", cols, std::vector<std::vector<int>>(grid), rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
         blueAgents.push_back(agent);
+        grid[y][x] = 1;
         connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
         connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
     }
@@ -137,9 +149,12 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
     for (int i = 0; i < redCount; i++) {
         int x, y;
         do {
-            x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 3);
-        } while (grid[y][x] == 1);
+            x = QRandomGenerator::global()->bounded(cols / 2, cols - 1);
+            y = QRandomGenerator::global()->bounded(1, rows - 1);
+            if (x >= 0 && x < cols && y >= 0 && y < rows && grid[y][x] != 1) {
+                break;
+            }
+        } while (true);
         Brain* redBrain = new Brain(); // Create a brain for each red agent
         if (!redBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
@@ -149,8 +164,9 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             qDebug() << "Failed to allocate memory for Memory object";
             delete redBrain;
         }
-        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
+        Agent* agent = new Agent(x, y, "red", cols, std::vector<std::vector<int>>(grid), rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
         redAgents.push_back(agent);
+        grid[y][x] = 1;
         connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
         connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }

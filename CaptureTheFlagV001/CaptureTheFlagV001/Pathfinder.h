@@ -18,7 +18,7 @@ private:
     std::vector<std::pair<int, int>> getNeighbors(int x, int y);
 
 public:
-    Pathfinder(const std::vector<std::vector<int>>& grid);
+    Pathfinder(const std::vector<std::vector<int>>& grid, int rows, int cols);
 
     void setDynamicObstacles(const std::vector<std::pair<int, int>>& obstacles);
     std::vector<std::pair<int, int>> findPath(int startX, int startY, int goalX, int goalY);

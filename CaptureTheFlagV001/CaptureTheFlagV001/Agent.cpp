@@ -8,8 +8,8 @@
 #include <QDebug>
 #include <QGraphicsView>
 
-Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
-    : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
+Agent::Agent(int x, int y, std::string side, int cols, std::vector<std::vector<int>> grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
+    : x(x), y(y), side(side), cols(cols), grid(std::move(grid)), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
     _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true), previousX(x), previousY(y), stuckTimer(0) {}
 
 void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
@@ -252,35 +252,22 @@ void Agent::exploreField() {
 
 void Agent::moveTowardsEnemyFlag() {
     std::pair<int, int> flagPos = gameManager->getEnemyFlagPosition(side);
+    path = pathfinder->findPath(x, y, flagPos.first, flagPos.second);
 
-    // Check if the enemy flag position is within the game field boundaries
-    if (flagPos.first >= 0 && flagPos.second >= 0) {
-        path = pathfinder->findPath(x, y, flagPos.first, flagPos.second);
+    if (!path.empty()) {
+        std::pair<int, int> nextStep = path.front();
+        x = nextStep.first;
+        y = nextStep.second;
+        path.erase(path.begin());
 
-        if (!path.empty()) {
-            std::pair<int, int> nextStep = path.front();
-
-            // Update the agent's position with the next step's grid coordinates
-            x = std::max(0, std::min(nextStep.first, cols - 1));
-            y = std::max(0, std::min(nextStep.second, rows - 1));
-            path.erase(path.begin());
-
-            if (distanceToEnemyFlag() <= 1) {  // Assuming 1 grid distance as proximity for flag capture
-                grabFlag();
-            }
-        }
-        else {
-            // No valid path found towards the enemy flag
-            // Start exploring the field until a valid path is found
-            exploreField();
+        if (distanceToEnemyFlag() <= 1) {
+            grabFlag();
         }
     }
     else {
-        // Handle the case when the enemy flag position is outside the game field boundaries
-        qDebug() << "Enemy flag position is outside the game field boundaries!";
+        exploreField();
     }
 }
-
 
 void Agent::moveTowardsHomeZone() {
     std::pair<int, int> homePos = gameManager->getTeamZonePosition(side);

@@ -9,9 +9,8 @@
 #include <QDebug>
 #include <qlogging.h>
 
-Pathfinder::Pathfinder(const std::vector<std::vector<int>>& grid) : grid(grid) {
-    rows = grid.size();
-    cols = grid[0].size();
+Pathfinder::Pathfinder(const std::vector<std::vector<int>>& grid, int rows, int cols)
+    : grid(grid), rows(rows), cols(cols) {
 }
 
 void Pathfinder::setDynamicObstacles(const std::vector<std::pair<int, int>>& obstacles) {
@@ -119,9 +118,12 @@ std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y) {
         int newY = y + dy[i];
 
         if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
-            // Check if the neighbor position is not occupied by another AI agent
-            if (std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(newX, newY)) == dynamicObstacles.end()) {
-                neighbors.push_back({ newX, newY });
+            // Check if the neighbor position is a valid cell in the grid
+            if (newX < grid[0].size() && newY < grid.size()) {
+                // Check if the neighbor position is not occupied by another AI agent
+                if (std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(newX, newY)) == dynamicObstacles.end()) {
+                    neighbors.push_back({ newX, newY });
+                }
             }
         }
     }
