@@ -148,8 +148,8 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
         blueAgents.push_back(agent);
         grid[y][x] = 1;
 
-        connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
-        connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
+        connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+        connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 
     // Initialize red agents
@@ -423,9 +423,11 @@ void GameField::updateAgentPositions() {
 
         // Check if the agent's position is within the game field boundaries
         if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
-            // Update the grid representation only if the new position is valid
-            grid[prevY][prevX] = 0; // Mark the previous position as empty
-            grid[newY][newX] = 1; // Mark the new position as occupied
+            // Clear the previous position in the grid
+            grid[prevY][prevX] = 0;
+
+            // Mark the new position as occupied
+            grid[newY][newX] = 1;
 
             bluePositions.emplace_back(newX, newY);
         }
