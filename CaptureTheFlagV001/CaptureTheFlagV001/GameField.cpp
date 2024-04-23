@@ -9,7 +9,7 @@
 #include "GameManager.h"
 
 GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
-    : QGraphicsView(parent), grid(grid) {
+    : QGraphicsView(parent), grid(grid), gameFieldWidth(0), gameFieldHeight(0) {
 
     setRenderHint(QPainter::Antialiasing);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -144,12 +144,12 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             delete blueBrain;
         }
 
-        Agent* agent = new Agent(x, y, "blue", cols, std::vector<std::vector<int>>(grid), rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
+        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
         blueAgents.push_back(agent);
         grid[y][x] = 1;
 
-        connect(agent, &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
-        connect(agent, &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
+        connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+        connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 
     // Initialize red agents
@@ -157,8 +157,8 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
         int x, y;
         bool validPosition = false;
         while (!validPosition) {
-            x = QRandomGenerator::global()->bounded(cols / 2, cols - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 2); 
+            x = QRandomGenerator::global()->bounded(cols / 2, cols - 2);
+            y = QRandomGenerator::global()->bounded(1, rows - 2);
             if (x > 0 && x < cols - 1 && y > 0 && y < rows - 1 && grid[y][x] != 1) {
                 validPosition = true;
             }
@@ -174,7 +174,7 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             delete redBrain;
         }
 
-        Agent* agent = new Agent(x, y, "red", cols, std::vector<std::vector<int>>(grid), rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
+        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
         redAgents.push_back(agent);
         grid[y][x] = 1;
 
@@ -329,13 +329,13 @@ void GameField::handleFlagCapture(const QString& team) {
 }
 
 void GameField::updateAgents() {
-    qDebug() << "Updating agent positions"; // Add this line
+    qDebug() << "Updating agent positions"; 
     updateAgentPositions();
 
-    qDebug() << "Checking tagging"; // Add this line
+    qDebug() << "Checking tagging"; 
     checkTagging();
 
-    qDebug() << "Updating agent item positions"; // Add this line
+    qDebug() << "Updating agent item positions"; 
     updateAgentItemsPositions();
 
     this->viewport()->update();
@@ -423,9 +423,11 @@ void GameField::updateAgentPositions() {
 
         // Check if the agent's position is within the game field boundaries
         if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
-            // Update the grid representation only if the new position is valid
-            grid[prevY][prevX] = 0; // Mark the previous position as empty
-            grid[newY][newX] = 1; // Mark the new position as occupied
+            // Clear the previous position in the grid
+            grid[prevY][prevX] = 0;
+
+            // Mark the new position as occupied
+            grid[newY][newX] = 1;
 
             bluePositions.emplace_back(newX, newY);
         }
@@ -480,7 +482,7 @@ void GameField::updateAgentItemsPositions() {
     for (Agent* agent : blueAgents) {
         QGraphicsItem* item = getAgentItem(agent);
         if (item) {
-            qDebug() << "Blue agent at (" << agent->getX() << ", " << agent->getY() << ") - Item found";
+            qDebug() << "Blue agent at (" << agent->getX() << ", " << agent->getY() << ") - Item found with updateAgentItemsPositions";
             item->setPos(agent->getX() * cellSize, agent->getY() * cellSize);
             QGraphicsPolygonItem* agentItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item);
             if (agentItem) {
@@ -502,14 +504,14 @@ void GameField::updateAgentItemsPositions() {
             }
         }
         else {
-            qDebug() << "Agent item not found in the scene for blue agent at position (" << agent->getX() << ", " << agent->getY() << ")";
+            qDebug() << "Agent item not found in the scene for blue agent at position (" << agent->getX() << ", " << agent->getY() << ") with updateAgentItemsPositions";
         }
     }
 
     for (Agent* agent : redAgents) {
         QGraphicsItem* item = getAgentItem(agent);
         if (item) {
-            qDebug() << "Red agent at (" << agent->getX() << ", " << agent->getY() << ") - Item found";
+            qDebug() << "Red agent at (" << agent->getX() << ", " << agent->getY() << ") - Item found with updateAgentItemsPositions";
             item->setPos(agent->getX() * cellSize, agent->getY() * cellSize);
             QGraphicsPolygonItem* agentItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item);
             if (agentItem) {
@@ -531,7 +533,7 @@ void GameField::updateAgentItemsPositions() {
             }
         }
         else {
-            qDebug() << "Agent item not found in the scene for red agent at position (" << agent->getX() << ", " << agent->getY() << ")";
+            qDebug() << "Agent item not found in the scene for red agent at position (" << agent->getX() << ", " << agent->getY() << ") with updateAgentItemsPositions";
         }
     }
 }
@@ -561,19 +563,19 @@ void GameField::checkTagging() {
 }
 
 QGraphicsItem* GameField::getAgentItem(Agent* agent) {
-    qDebug() << "Looking for agent item with pointer:" << agent;
-    qDebug() << "Agent position: (" << agent->getX() << ", " << agent->getY() << ")";
-    qDebug() << "Agent side:" << QString::fromStdString(agent->getSide());
+    qDebug() << "Looking for agent item with pointer with getAgentItem:" << agent;
+    qDebug() << "Agent position with getAgentItem: (" << agent->getX() << ", " << agent->getY() << ")";
+    qDebug() << "Agent side with getAgentItem:" << QString::fromStdString(agent->getSide());
 
     for (QGraphicsItem* item : scene->items()) {
-        qDebug() << "Item data:" << item->data(0).toString();
+        qDebug() << "Item data with getAgentItem:" << item->data(0).toString();
         if (item->data(0).value<quintptr>() == reinterpret_cast<quintptr>(agent)) {
-            qDebug() << "Found matching item for agent:" << agent;
+            qDebug() << "Found matching item for agent with getAgentItem:" << agent;
             return item;
         }
     }
 
-    qDebug() << "No matching item found for agent:" << agent;
+    qDebug() << "No matching item found for agent with getAgentItem:" << agent;
     return nullptr;
 }
 
@@ -665,7 +667,15 @@ std::pair<int, int> GameField::pixelToGrid(int pixelX, int pixelY) {
 void GameField::setupScene() {
     scene = new QGraphicsScene(this);
     setScene(scene);
-    setSceneRect(0, 0, 800, 600);
+    // Calculate the game field width and height based on the grid dimensions
+    gameFieldWidth = cols * cellSize;
+    gameFieldHeight = rows * cellSize;
+
+    // Set the scene rect to match the game field size
+    setSceneRect(0, 0, gameFieldWidth, gameFieldHeight);
+
+    // Create the grid based on the calculated rows and columns
+    grid.resize(rows, std::vector<int>(cols, 0));
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
@@ -779,29 +789,45 @@ void GameField::setupScene() {
 
     // Add agents
     for (Agent* agent : blueAgents) {
-        QGraphicsEllipseItem* blueAgent = new QGraphicsEllipseItem();
-        int x = agent->getX() * cellSize;
-        int y = agent->getY() * cellSize;
-        blueAgent->setRect(x - 10, y - 10, 20, 20);
-        blueAgent->setBrush(Qt::blue);
-        blueAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent)));
-        scene->addItem(blueAgent);
-        qDebug() << "Blue agent (SetupScene) added at position (" << x << ", " << y << ")";
-        qDebug() << "Agent pointer from SetupScene:" << agent;
-        qDebug() << "Item data from SetupScene:" << blueAgent->data(0).value<quintptr>();
+        int col = agent->getX();
+        int row = agent->getY();
+        int x = col * cellSize;
+        int y = row * cellSize;
+
+        // Check if the agent's position is within the valid range
+        if (col >= 0 && col < cols / 2 && row >= 0 && row < rows) {
+            QGraphicsEllipseItem* blueAgent = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
+            blueAgent->setBrush(Qt::blue);
+            blueAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent)));
+            scene->addItem(blueAgent);
+            qDebug() << "Blue agent (SetupScene) added at position (" << x << ", " << y << ")";
+            qDebug() << "Agent pointer from SetupScene:" << agent;
+            qDebug() << "Item data from SetupScene:" << blueAgent->data(0).value<quintptr>();
+        }
+        else {
+            qDebug() << "Blue agent position (" << col << ", " << row << ") is outside the valid range";
+        }
     }
 
     for (Agent* agent : redAgents) {
-        QGraphicsEllipseItem* redAgent = new QGraphicsEllipseItem();
-        int x = agent->getX() * cellSize;
-        int y = agent->getY() * cellSize;
-        redAgent->setRect(x - 10, y - 10, 20, 20);
-        redAgent->setBrush(Qt::red);
-        redAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent)));
-        scene->addItem(redAgent);
-        qDebug() << "Red agent (SetupScene) added at position (" << x << ", " << y << ")";
-        qDebug() << "Agent pointer from SetupScene:" << agent;
-        qDebug() << "Item data from SetupScene:" << redAgent->data(0).value<quintptr>();
+        int col = agent->getX();
+        int row = agent->getY();
+        int x = col * cellSize;
+        int y = row * cellSize;
+
+        // Check if the agent's position is within the valid range
+        if (col >= cols / 2 && col < cols && row >= 0 && row < rows) {
+            QGraphicsEllipseItem* redAgent = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
+            redAgent->setBrush(Qt::red);
+            redAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent)));
+            scene->addItem(redAgent);
+            qDebug() << "Red agent (SetupScene) added at position (" << x << ", " << y << ")";
+            qDebug() << "Agent pointer from SetupScene:" << agent;
+            qDebug() << "Item data from SetupScene:" << redAgent->data(0).value<quintptr>();
+        }
+        else {
+            qDebug() << "Red agent position (" << col << ", " << row << ") is outside the valid range";
+        }
     }
 
     qDebug() << "Number of blue agent items added:" << blueAgents.size();
