@@ -24,7 +24,7 @@ class Agent : public QObject {
 private:
     int x, y;
     int cols, rows;
-    const std::vector<std::vector<int>>& grid;
+    std::vector<std::vector<int>>& grid;
     Pathfinder* pathfinder;
     Brain* brain;
     Memory* memory;
@@ -44,7 +44,7 @@ private:
     std::string side;
 
 public:
-    Agent(int x, int y, std::string side, int cols, std::vector<std::vector<int>> grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents);
+    Agent(int x, int y, std::string side, int cols, std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents);
 
     void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents);
     void updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions);
@@ -57,6 +57,7 @@ public:
     std::pair<int, int> gridToPixel(int gridX, int gridY);
     std::pair<int, int> pixelToGrid(int pixelX, int pixelY);
     bool isValidGridPosition(int gridX, int gridY);
+    bool isValidPosition(int newX, int newY) const;
     void respawnInTeamArea();
     float distanceTo(const Agent* otherAgent) const;
     void exploreField();

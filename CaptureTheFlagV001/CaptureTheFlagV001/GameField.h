@@ -48,6 +48,8 @@ private:
     QGraphicsScene* scene;
     std::vector<Agent*> blueAgents;
     std::vector<Agent*> redAgents;
+    int gameFieldWidth;
+    int gameFieldHeight;
     Pathfinder* pathfinder;
     int cellSize;
     int blueScore;
