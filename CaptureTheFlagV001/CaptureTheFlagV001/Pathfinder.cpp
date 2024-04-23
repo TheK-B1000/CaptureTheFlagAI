@@ -1,4 +1,5 @@
 #include "Pathfinder.h"
+#include "GameField.h"
 #include "Agent.h"
 #include <queue>
 #include <cmath>
@@ -8,9 +9,8 @@
 #include <QDebug>
 #include <qlogging.h>
 
-Pathfinder::Pathfinder(const std::vector<std::vector<int>>& grid) : grid(grid) {
-    rows = grid.size();
-    cols = grid[0].size();
+Pathfinder::Pathfinder(const std::vector<std::vector<int>>& grid, int rows, int cols)
+    : grid(grid), rows(rows), cols(cols) {
 }
 
 void Pathfinder::setDynamicObstacles(const std::vector<std::pair<int, int>>& obstacles) {
@@ -24,7 +24,10 @@ double Pathfinder::calculateHeuristic(int x1, int y1, int x2, int y2) {
 }
 
 std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, int goalX, int goalY) {
-    std::priority_queue<std::pair<double, std::pair<int, int>>, std::vector<std::pair<double, std::pair<int, int>>>, std::greater<std::pair<double, std::pair<int, int>>>> openSet;
+    std::priority_queue<std::pair<double, std::pair<int, int>>,
+        std::vector<std::pair<double, std::pair<int, int>>>,
+        std::greater<std::pair<double, std::pair<int, int>>>> openSet;
+
     std::unordered_map<std::pair<int, int>, double, pair_hash> gScore;
     std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash> cameFrom;
 
@@ -41,6 +44,7 @@ std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, in
             qDebug() << "Pathfinder: Goal reached!";
 
             std::vector<std::pair<int, int>> path;
+
             while (current != std::make_pair(startX, startY)) {
                 path.push_back(current);
                 current = cameFrom[current];
@@ -56,14 +60,17 @@ std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, in
         }
 
         for (const auto& neighbor : getNeighbors(current.first, current.second)) {
-            double tentativeGScore = gScore[current] + 1;
+            // Check if the neighbor position is within the game field boundaries
+            if (neighbor.first >= 0 && neighbor.first < cols && neighbor.second >= 0 && neighbor.second < rows) {
+                double tentativeGScore = gScore[current] + 1;
 
-            if (gScore.find(neighbor) == gScore.end() || tentativeGScore < gScore[neighbor]) {
-                cameFrom[neighbor] = current;
-                gScore[neighbor] = tentativeGScore;
-                double fScore = tentativeGScore + calculateHeuristic(neighbor.first, neighbor.second, goalX, goalY);
+                if (gScore.find(neighbor) == gScore.end() || tentativeGScore < gScore[neighbor]) {
+                    cameFrom[neighbor] = current;
+                    gScore[neighbor] = tentativeGScore;
+                    double fScore = tentativeGScore + calculateHeuristic(neighbor.first, neighbor.second, goalX, goalY);
 
-                openSet.push({ fScore, neighbor });
+                    openSet.push({ fScore, neighbor });
+                }
             }
         }
     }
@@ -80,7 +87,10 @@ std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y) {
     for (int i = 0; i < 4; ++i) {
         int newX = x + dx[i];
         int newY = y + dy[i];
-        if (newX >= 0 && newX < rows && newY >= 0 && newY < cols && grid[newX][newY] != 1) {
+
+        // Check if the neighbor position is within the game field boundaries
+        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+            // Check if the neighbor position is not occupied by another AI agent
             if (std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(newX, newY)) == dynamicObstacles.end()) {
                 neighbors.push_back({ newX, newY });
             }

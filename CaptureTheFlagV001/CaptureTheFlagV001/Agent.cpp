@@ -8,8 +8,8 @@
 #include <QDebug>
 #include <QGraphicsView>
 
-Agent::Agent(int x, int y, std::string side, int cols, const std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
-    : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
+Agent::Agent(int x, int y, std::string side, int cols, std::vector<std::vector<int>> grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
+    : x(x), y(y), side(side), cols(cols), grid(std::move(grid)), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
     _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true), previousX(x), previousY(y), stuckTimer(0) {}
 
 void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
@@ -19,6 +19,14 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     // is ai agent activated
     if (!_isEnabled) {
         return;
+    }
+
+    if (!_isCarryingFlag && !_isTagged && distanceToEnemyFlag() <= 10) {
+        std::cout << "Agent " << side << " is attempting to grab the enemy flag." << std::endl;
+    }
+
+    if (_isCarryingFlag && checkInTeamZone()) {
+        std::cout << "Agent " << side << " is attempting to capture the flag." << std::endl;
     }
 
     // is ai agent tagged
@@ -81,18 +89,6 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         path.erase(path.begin());
     }
 
-    if (path.empty() && (x == previousX && y == previousY)) {
-        stuckTimer++;
-        if (stuckTimer >= stuckThreshold) {
-            std::pair<int, int> targetPosition = pathfinder->getRandomFreePosition();
-            path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);            
-            stuckTimer = 0;
-        }
-    }
-    else {
-        stuckTimer = 0;
-    }
-
     previousX = x;
     previousY = y;
     handleFlagInteractions();
@@ -115,7 +111,7 @@ void Agent::updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPosi
 }
 
 void Agent::handleFlagInteractions() {
-    // checks if not carrying flag, not tagges, and is within a 10 unit distance or in opponent team zone
+    // checks if not carrying flag, not tagged, and is within a 10 unit distance or in opponent team zone
     if (!_isCarryingFlag && !_isTagged && distanceToEnemyFlag() <= 10) {
         // checks to make sure no team ai agent is already holding a flag
         if (!isTeamCarryingFlag(blueAgents, redAgents)) {
@@ -219,57 +215,79 @@ float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& othe
 }
 
 void Agent::exploreField() {
-    if (path.empty()) {
-        std::pair<int, int> targetPosition;
+    // Check if the agent has reached the current target position
+    if (!path.empty() && (x != path.back().first || y != path.back().second)) {
+        // Agent has not reached the target position, continue following the current path
+        std::pair<int, int> nextStep = path.front();
+        int newX = nextStep.first;
+        int newY = nextStep.second;
 
+        // Check if the new position is within the game field boundaries
+        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+            qDebug() << "Agent at (" << x << ", " << y << ") moving to (" << newX << ", " << newY << ") while exploring the field.";
+            x = newX;
+            y = newY;
+            path.erase(path.begin());
+        }
+        else {
+            qDebug() << "Next position (" << newX << ", " << newY << ") is outside the game field boundaries.";
+            respawnInTeamArea();
+        }
+    }
+    else {
+        // Agent has reached the target position or the path is empty
+        // Generate a new random target position within the game field boundaries
+        int minX = 0, minY = 0, maxX = cols - 1, maxY = rows - 1;
+        std::pair<int, int> targetPosition;
         do {
             targetPosition = pathfinder->getRandomFreePosition();
-        } while (targetPosition.first < 5 || targetPosition.first > 794 || targetPosition.second < 10 || targetPosition.second > 589);
+        } while (targetPosition.first < minX || targetPosition.first > maxX ||
+            targetPosition.second < minY || targetPosition.second > maxY);
 
+        qDebug() << "Agent at (" << x << ", " << y << ") setting new target position (" << targetPosition.first << ", " << targetPosition.second << ") for exploration.";
+
+        // Calculate a new path to the target position
         path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
     }
+}
+
+void Agent::moveTowardsEnemyFlag() {
+    std::pair<int, int> flagPos = gameManager->getEnemyFlagPosition(side);
+    path = pathfinder->findPath(x, y, flagPos.first, flagPos.second);
 
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
-        int newX = std::max(5, std::min(nextStep.first, 794));
-        int newY = std::max(10, std::min(nextStep.second, 589));
+        int newX = nextStep.first;
+        int newY = nextStep.second;
 
-        x = newX;
-        y = newY;
-        path.erase(path.begin());
-    }
-}
-void Agent::moveTowardsEnemyFlag() {
-    std::pair<int, int> flagPos = gameManager->getEnemyFlagPosition(side);
-
-    // Check if the enemy flag position is within the game field boundaries
-    if (flagPos.first >= 0 && flagPos.first < cols && flagPos.second >= 0 && flagPos.second < rows) {
-        path = pathfinder->findPath(x, y, flagPos.first, flagPos.second);
-
-        if (!path.empty()) {
-            std::pair<int, int> nextStep = path.front();
-
-            // Update the agent's position with the next step's grid coordinates
-            x = std::max(0, std::min(nextStep.first, cols - 1));
-            y = std::max(0, std::min(nextStep.second, rows - 1));
+        // Check if the new position is within the game field boundaries
+        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+            qDebug() << "Agent at (" << x << ", " << y << ") moving to (" << newX << ", " << newY << ") towards the enemy flag.";
+            x = newX;
+            y = newY;
             path.erase(path.begin());
 
-            if (distanceToEnemyFlag() <= 1) {  // Assuming 1 grid distance as proximity for flag capture
+            if (distanceToEnemyFlag() <= 1) {
                 grabFlag();
             }
         }
         else {
-            // No valid path found towards the enemy flag
-            // Start exploring the field until a valid path is found
-            exploreField();
+            // The new position is outside the game field boundaries
+            qDebug() << "Next position (" << newX << ", " << newY << ") is outside the game field boundaries.";
+            respawnInTeamArea();
         }
     }
     else {
-        // Handle the case when the enemy flag position is outside the game field boundaries
-        qDebug() << "Enemy flag position is outside the game field boundaries!";
+        qDebug() << "Agent at (" << x << ", " << y << ") couldn't find a path to the enemy flag, exploring the field instead.";
+        exploreField();
+    }
+
+    // Check if the agent's current position is outside the game field or grid
+    if (x < 0 || x >= cols || y < 0 || y >= rows) {
+        qDebug() << "Agent at (" << x << ", " << y << ") is outside the game field or grid.";
+        respawnInTeamArea();
     }
 }
-
 
 void Agent::moveTowardsHomeZone() {
     std::pair<int, int> homePos = gameManager->getTeamZonePosition(side);
@@ -281,9 +299,18 @@ void Agent::moveTowardsHomeZone() {
         std::pair<int, int> nextStep = path.front();
         int newX = std::max(0, std::min(nextStep.first, pathfinder->getCols() - 1));
         int newY = std::max(0, std::min(nextStep.second, pathfinder->getRows() - 1));
-        x = newX;
-        y = newY;
-        path.erase(path.begin());
+
+        // Check if the new position is within the game field boundaries
+        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+            qDebug() << "Agent at (" << x << ", " << y << ") moving to (" << newX << ", " << newY << ") towards the home zone.";
+            x = newX;
+            y = newY;
+            path.erase(path.begin());
+        }
+        else {
+            qDebug() << "Next position (" << newX << ", " << newY << ") is outside the game field boundaries.";
+            respawnInTeamArea();
+        }
     }
 }
 
@@ -311,9 +338,18 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
             std::pair<int, int> nextStep = path.front();
             int newX = std::max(0, std::min(nextStep.first, pathfinder->getCols() - 1));
             int newY = std::max(0, std::min(nextStep.second, pathfinder->getRows() - 1));
-            x = newX;
-            y = newY;
-            path.erase(path.begin());
+
+            // Check if the new position is within the game field boundaries
+            if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+                qDebug() << "Agent at (" << x << ", " << y << ") moving to (" << newX << ", " << newY << ") to chase the opponent with the flag.";
+                x = newX;
+                y = newY;
+                path.erase(path.begin());
+            }
+            else {
+                qDebug() << "Next position (" << newX << ", " << newY << ") is outside the game field boundaries.";
+                respawnInTeamArea();
+            }
         }
     }
 }
@@ -394,6 +430,18 @@ bool Agent::checkInTeamZone() const {
 
     // Check if the agent is within the team zone
     return distanceToFlag <= teamZoneRadius;
+}
+
+void Agent::respawnInTeamArea() {
+    std::pair<int, int> teamZonePosition = gameManager->getTeamZonePosition(side);
+    int teamZoneX = std::max(0, std::min(teamZonePosition.first, pathfinder->getCols() - 1));
+    int teamZoneY = std::max(0, std::min(teamZonePosition.second, pathfinder->getRows() - 1));
+
+    x = teamZoneX;
+    y = teamZoneY;
+    path.clear();
+
+    qDebug() << "Agent respawned in team zone at (" << x << ", " << y << ")";
 }
 
 void Agent::setX(int newX) {
