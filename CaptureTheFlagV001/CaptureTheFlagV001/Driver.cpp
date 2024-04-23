@@ -14,7 +14,7 @@ Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
 
     setCentralWidget(gameField);
 
-    // Create the menu barAa
+    // Create the menu bar
     QMenuBar* menuBar = new QMenuBar(this);
     setMenuBar(menuBar);
 

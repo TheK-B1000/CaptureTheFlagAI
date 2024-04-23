@@ -134,7 +134,7 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             qDebug() << "Failed to allocate memory for Memory object";
         }
 
-        std::unique_ptr<Agent> agent(new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain.get(), blueMemory.get(), gameManager));
+        std::unique_ptr<Agent> agent(new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain.get(), blueMemory.get(), gameManager, blueAgents, redAgents));
         blueAgents.push_back(agent.get()); // Add the raw pointer to the vector
         grid[y][x] = 1;
 
@@ -165,7 +165,7 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             qDebug() << "Failed to allocate memory for Memory object";
         }
 
-        std::unique_ptr<Agent> agent(new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain.get(), redMemory.get(), gameManager));
+        std::unique_ptr<Agent> agent(new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain.get(), redMemory.get(), gameManager, blueAgents, redAgents));
         redAgents.push_back(agent.get()); // Add the raw pointer to the vector
         grid[y][x] = 1;
 
