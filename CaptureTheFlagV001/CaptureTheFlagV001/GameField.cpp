@@ -329,13 +329,13 @@ void GameField::handleFlagCapture(const QString& team) {
 }
 
 void GameField::updateAgents() {
-    qDebug() << "Updating agent positions"; // Add this line
+    qDebug() << "Updating agent positions"; 
     updateAgentPositions();
 
-    qDebug() << "Checking tagging"; // Add this line
+    qDebug() << "Checking tagging"; 
     checkTagging();
 
-    qDebug() << "Updating agent item positions"; // Add this line
+    qDebug() << "Updating agent item positions"; 
     updateAgentItemsPositions();
 
     this->viewport()->update();
