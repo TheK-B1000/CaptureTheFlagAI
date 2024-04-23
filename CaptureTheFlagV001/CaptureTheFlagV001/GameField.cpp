@@ -6,17 +6,17 @@
 #include <QGraphicsItem>
 #include <QGraphicsTextItem>
 #include <QFont>
+#include <memory>
 #include "GameManager.h"
 
 GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
     : QGraphicsView(parent), grid(grid), gameFieldWidth(0), gameFieldHeight(0) {
-
     setRenderHint(QPainter::Antialiasing);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     // Create the Pathfinder object
-        rows = grid.size();
+    rows = grid.size();
     cols = grid[0].size();
     if (rows == 0 || cols == 0) {
         // Handle the case when the grid is empty
@@ -94,62 +94,53 @@ void GameField::clearAgents() {
     // Delete all existing agents
     for (Agent* agent : blueAgents) {
         if (agent) {
-            if (agent->getBrain()) {
-                delete agent->getBrain();
-            }
-            if (agent->getMemory()) {
-                delete agent->getMemory();
-            }
             delete agent;
-            agent = nullptr; 
+            agent = nullptr;
         }
     }
 
     for (Agent* agent : redAgents) {
         if (agent) {
-            if (agent->getBrain()) {
-                delete agent->getBrain();
-            }
-            if (agent->getMemory()) {
-                delete agent->getMemory();
-            }
             delete agent;
             agent = nullptr;
         }
     }
+
     redAgents.clear();
 }
 
 void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager) {
     qDebug() << "setupAgents called with blueCount:" << blueCount << "and redCount:" << redCount;
+
     // Initialize blue agents
     for (int i = 0; i < blueCount; i++) {
         int x, y;
         bool validPosition = false;
         while (!validPosition) {
-            x = QRandomGenerator::global()->bounded(1, cols / 2 - 1); 
-            y = QRandomGenerator::global()->bounded(1, rows - 2); 
+            x = QRandomGenerator::global()->bounded(1, cols / 2 - 1);
+            y = QRandomGenerator::global()->bounded(1, rows - 2);
             if (x > 0 && x < cols - 1 && y > 0 && y < rows - 1 && grid[y][x] != 1) {
                 validPosition = true;
             }
         }
-        Brain* blueBrain = new Brain();
+
+        std::unique_ptr<Brain> blueBrain(new Brain());
         if (!blueBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
         }
 
-        Memory* blueMemory = new Memory();
+        std::unique_ptr<Memory> blueMemory(new Memory());
         if (!blueMemory) {
             qDebug() << "Failed to allocate memory for Memory object";
-            delete blueBrain;
         }
 
-        Agent* agent = new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
-        blueAgents.push_back(agent);
+        std::unique_ptr<Agent> agent(new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain.get(), blueMemory.get(), gameManager));
+        blueAgents.push_back(agent.get()); // Add the raw pointer to the vector
         grid[y][x] = 1;
 
-        connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-        connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
+        // Connect signals and slots
+        connect(agent.get(), &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
+        connect(agent.get(), &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
     }
 
     // Initialize red agents
@@ -163,23 +154,24 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
                 validPosition = true;
             }
         }
-        Brain* redBrain = new Brain();
+
+        std::unique_ptr<Brain> redBrain(new Brain());
         if (!redBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
         }
 
-        Memory* redMemory = new Memory();
+        std::unique_ptr<Memory> redMemory(new Memory());
         if (!redMemory) {
             qDebug() << "Failed to allocate memory for Memory object";
-            delete redBrain;
         }
 
-        Agent* agent = new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
-        redAgents.push_back(agent);
+        std::unique_ptr<Agent> agent(new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain.get(), redMemory.get(), gameManager));
+        redAgents.push_back(agent.get()); // Add the raw pointer to the vector
         grid[y][x] = 1;
 
-        connect(agent, &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-        connect(agent, &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
+        // Connect signals and slots
+        connect(agent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+        connect(agent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 }
 
@@ -864,15 +856,12 @@ void GameField::setupScene() {
 GameField::~GameField() {
     delete pathfinder;
 
+    // Delete Agent objects
     for (Agent* agent : blueAgents) {
-        delete agent->getBrain();
-        delete agent->getMemory();
         delete agent;
     }
 
     for (Agent* agent : redAgents) {
-        delete agent->getBrain();
-        delete agent->getMemory();
         delete agent;
     }
 

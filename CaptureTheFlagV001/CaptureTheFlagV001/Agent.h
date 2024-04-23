@@ -8,6 +8,7 @@
 #include "Brain.h"
 #include "Memory.h"
 #include "GameManager.h"
+#include <memory> 
 #include <QObject>
 
 enum class AgentMode {
@@ -26,8 +27,8 @@ private:
     int cols, rows;
     std::vector<std::vector<int>>& grid;
     Pathfinder* pathfinder;
-    Brain* brain;
-    Memory* memory;
+    std::unique_ptr<Brain> brain;
+    std::unique_ptr<Memory> memory;
     GameManager* gameManager;
     bool _isCarryingFlag;
     bool _isTagged;
@@ -44,7 +45,7 @@ private:
     std::string side;
 
 public:
-    Agent(int x, int y, std::string side, int cols, std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents);
+    Agent(int x, int y, std::string side, int cols, std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager);
 
     void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents);
     void updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions);
@@ -83,8 +84,8 @@ public:
     void decrementCooldownTimer();
     const std::vector<Agent*>& getBlueAgents() const { return blueAgents; }
     const std::vector<Agent*>& getRedAgents() const { return redAgents; }
-    Brain* getBrain() const { return brain; }
-    Memory* getMemory() const { return memory; }
+    const std::unique_ptr<Brain>& getBrain() const { return brain; }
+    const std::unique_ptr<Memory>& getMemory() const { return memory; }
     bool isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents);
     std::string getSide() const { return side; }
     float getTaggingDistance() const { return taggingDistance; }
