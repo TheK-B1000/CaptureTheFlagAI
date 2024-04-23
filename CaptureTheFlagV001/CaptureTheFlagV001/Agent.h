@@ -57,6 +57,7 @@ public:
     std::pair<int, int> gridToPixel(int gridX, int gridY);
     std::pair<int, int> pixelToGrid(int pixelX, int pixelY);
     bool isValidGridPosition(int gridX, int gridY);
+    void respawnInTeamArea();
     float distanceTo(const Agent* otherAgent) const;
     void exploreField();
     void moveTowardsEnemyFlag();

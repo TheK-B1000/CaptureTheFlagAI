@@ -89,18 +89,6 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         path.erase(path.begin());
     }
 
-    if (path.empty() && (x == previousX && y == previousY)) {
-        stuckTimer++;
-        if (stuckTimer >= stuckThreshold) {
-            std::pair<int, int> targetPosition = pathfinder->getRandomFreePosition();
-            path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);            
-            stuckTimer = 0;
-        }
-    }
-    else {
-        stuckTimer = 0;
-    }
-
     previousX = x;
     previousY = y;
     handleFlagInteractions();
@@ -231,9 +219,20 @@ void Agent::exploreField() {
     if (!path.empty() && (x != path.back().first || y != path.back().second)) {
         // Agent has not reached the target position, continue following the current path
         std::pair<int, int> nextStep = path.front();
-        x = nextStep.first;
-        y = nextStep.second;
-        path.erase(path.begin());
+        int newX = nextStep.first;
+        int newY = nextStep.second;
+
+        // Check if the new position is within the game field boundaries
+        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+            qDebug() << "Agent at (" << x << ", " << y << ") moving to (" << newX << ", " << newY << ") while exploring the field.";
+            x = newX;
+            y = newY;
+            path.erase(path.begin());
+        }
+        else {
+            qDebug() << "Next position (" << newX << ", " << newY << ") is outside the game field boundaries.";
+            respawnInTeamArea();
+        }
     }
     else {
         // Agent has reached the target position or the path is empty
@@ -244,6 +243,8 @@ void Agent::exploreField() {
             targetPosition = pathfinder->getRandomFreePosition();
         } while (targetPosition.first < minX || targetPosition.first > maxX ||
             targetPosition.second < minY || targetPosition.second > maxY);
+
+        qDebug() << "Agent at (" << x << ", " << y << ") setting new target position (" << targetPosition.first << ", " << targetPosition.second << ") for exploration.";
 
         // Calculate a new path to the target position
         path = pathfinder->findPath(x, y, targetPosition.first, targetPosition.second);
@@ -256,16 +257,35 @@ void Agent::moveTowardsEnemyFlag() {
 
     if (!path.empty()) {
         std::pair<int, int> nextStep = path.front();
-        x = nextStep.first;
-        y = nextStep.second;
-        path.erase(path.begin());
+        int newX = nextStep.first;
+        int newY = nextStep.second;
 
-        if (distanceToEnemyFlag() <= 1) {
-            grabFlag();
+        // Check if the new position is within the game field boundaries
+        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+            qDebug() << "Agent at (" << x << ", " << y << ") moving to (" << newX << ", " << newY << ") towards the enemy flag.";
+            x = newX;
+            y = newY;
+            path.erase(path.begin());
+
+            if (distanceToEnemyFlag() <= 1) {
+                grabFlag();
+            }
+        }
+        else {
+            // The new position is outside the game field boundaries
+            qDebug() << "Next position (" << newX << ", " << newY << ") is outside the game field boundaries.";
+            respawnInTeamArea();
         }
     }
     else {
+        qDebug() << "Agent at (" << x << ", " << y << ") couldn't find a path to the enemy flag, exploring the field instead.";
         exploreField();
+    }
+
+    // Check if the agent's current position is outside the game field or grid
+    if (x < 0 || x >= cols || y < 0 || y >= rows) {
+        qDebug() << "Agent at (" << x << ", " << y << ") is outside the game field or grid.";
+        respawnInTeamArea();
     }
 }
 
@@ -279,9 +299,18 @@ void Agent::moveTowardsHomeZone() {
         std::pair<int, int> nextStep = path.front();
         int newX = std::max(0, std::min(nextStep.first, pathfinder->getCols() - 1));
         int newY = std::max(0, std::min(nextStep.second, pathfinder->getRows() - 1));
-        x = newX;
-        y = newY;
-        path.erase(path.begin());
+
+        // Check if the new position is within the game field boundaries
+        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+            qDebug() << "Agent at (" << x << ", " << y << ") moving to (" << newX << ", " << newY << ") towards the home zone.";
+            x = newX;
+            y = newY;
+            path.erase(path.begin());
+        }
+        else {
+            qDebug() << "Next position (" << newX << ", " << newY << ") is outside the game field boundaries.";
+            respawnInTeamArea();
+        }
     }
 }
 
@@ -309,9 +338,18 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
             std::pair<int, int> nextStep = path.front();
             int newX = std::max(0, std::min(nextStep.first, pathfinder->getCols() - 1));
             int newY = std::max(0, std::min(nextStep.second, pathfinder->getRows() - 1));
-            x = newX;
-            y = newY;
-            path.erase(path.begin());
+
+            // Check if the new position is within the game field boundaries
+            if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+                qDebug() << "Agent at (" << x << ", " << y << ") moving to (" << newX << ", " << newY << ") to chase the opponent with the flag.";
+                x = newX;
+                y = newY;
+                path.erase(path.begin());
+            }
+            else {
+                qDebug() << "Next position (" << newX << ", " << newY << ") is outside the game field boundaries.";
+                respawnInTeamArea();
+            }
         }
     }
 }
@@ -392,6 +430,18 @@ bool Agent::checkInTeamZone() const {
 
     // Check if the agent is within the team zone
     return distanceToFlag <= teamZoneRadius;
+}
+
+void Agent::respawnInTeamArea() {
+    std::pair<int, int> teamZonePosition = gameManager->getTeamZonePosition(side);
+    int teamZoneX = std::max(0, std::min(teamZonePosition.first, pathfinder->getCols() - 1));
+    int teamZoneY = std::max(0, std::min(teamZonePosition.second, pathfinder->getRows() - 1));
+
+    x = teamZoneX;
+    y = teamZoneY;
+    path.clear();
+
+    qDebug() << "Agent respawned in team zone at (" << x << ", " << y << ")";
 }
 
 void Agent::setX(int newX) {
