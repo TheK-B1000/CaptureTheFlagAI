@@ -33,6 +33,11 @@ std::pair<int, int> GameManager::getEnemyFlagPosition(const std::string& side) c
     return (side == "blue") ? redFlagPosition : blueFlagPosition;
 }
 std::pair<int, int> GameManager::getTeamZonePosition(const std::string& side) const {
+    if (side.empty()) {
+        // Handle the case where the side is an empty string
+        return std::make_pair(-1, -1);
+    }
+
     int teamZoneRadius = 40; // Radius of the team zone (half of the team zone diameter)
 
     // Get the current flag position based on the agent's side

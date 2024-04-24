@@ -8,11 +8,13 @@
 #include <QDebug>
 #include <QGraphicsView>
 
-Agent::Agent(int x, int y, std::string side, int cols, std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
-    : x(x), y(y), side(side), cols(cols), grid(grid), rows(rows), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager), blueAgents(blueAgents), redAgents(redAgents),
-    _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true), previousX(x), previousY(y), stuckTimer(0) {}
+Agent::Agent(int x, int y, std::string side, int cols, int rows, std::vector<std::vector<int>>& grid, Pathfinder* pathfinder, float taggingDistance,
+    Brain* brain, Memory* memory, GameManager* gameManager, std::vector<std::unique_ptr<Agent>>& blueAgents, std::vector<std::unique_ptr<Agent>>& redAgents)
+    : x(x), y(y), side(side), cols(cols), rows(rows), grid(grid), pathfinder(pathfinder), taggingDistance(taggingDistance),
+    brain(brain), memory(memory), gameManager(gameManager), _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true),
+    previousX(x), previousY(y), stuckTimer(0) {}
 
-void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents) {
+void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents) {
     // Updates memory of agent with position of other agents
     updateMemory(otherAgentsPositions);
 
@@ -90,7 +92,7 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
 
     previousX = x;
     previousY = y;
-    handleFlagInteractions();
+    handleFlagInteractions(blueAgents, redAgents);
     handleCooldownTimer();
 }
 
@@ -109,7 +111,7 @@ void Agent::updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPosi
     }
 }
 
-void Agent::handleFlagInteractions() {
+void Agent::handleFlagInteractions(const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents) {
     // checks if not carrying flag, not tagged, and is within a 10 unit distance or in opponent team zone
     if (!_isCarryingFlag && !_isTagged && distanceToEnemyFlag() <= 10) {
         // checks to make sure no team ai agent is already holding a flag
@@ -129,10 +131,9 @@ void Agent::handleFlagInteractions() {
     }
 }
 
-// Checks if team is already holding the enemy flag
-bool Agent::isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents) {
-    for (const Agent* teammate : (side == "blue" ? blueAgents : redAgents)) {
-        if (teammate != this && teammate->isCarryingFlag()) {
+bool Agent::isTeamCarryingFlag(const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents) {
+    for (const auto& teammate : (getSide() == "blue" ? blueAgents : redAgents)) {
+        if (teammate.get() != this && teammate->isCarryingFlag()) {
             return true;
         }
     }
@@ -405,6 +406,11 @@ void Agent::resetFlag() {
 }
 
 bool Agent::checkInTeamZone() const {
+    if (gameManager == nullptr) {
+        // Handle the case when the GameManager object is not initialized
+        qDebug() << "Error: GameManager is not initialized";
+        return false;
+    }
     int teamZoneRadius = 40; 
 
     // Get the current flag position based on the agent's side
