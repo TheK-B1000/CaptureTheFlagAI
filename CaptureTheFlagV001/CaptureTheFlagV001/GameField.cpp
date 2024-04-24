@@ -122,8 +122,7 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             qDebug() << "Failed to allocate memory for Memory object";
             return;
         }
-
-        std::unique_ptr<Agent> blueAgent = std::make_unique<Agent>(x, y, "blue", cols, rows, grid, pathfinder, taggingDistance, blueBrain.get(), blueMemory.get(), gameManager);
+        std::unique_ptr<Agent> blueAgent = std::make_unique<Agent>(x, y, "blue", cols, rows, grid, pathfinder, taggingDistance, blueBrain.get(), blueMemory.get(), gameManager, blueAgents, redAgents);
         blueAgents.emplace_back(std::move(blueAgent));
 
         grid[y][x] = 1;
@@ -157,7 +156,7 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             return;
         }
 
-        std::unique_ptr<Agent> redAgent = std::make_unique<Agent>(x, y, "red", cols, rows, grid, pathfinder, taggingDistance, redBrain.get(), redMemory.get(), gameManager);
+        std::unique_ptr<Agent> redAgent = std::make_unique<Agent>(x, y, "red", cols, rows, grid, pathfinder, taggingDistance, redBrain.get(), redMemory.get(), gameManager, blueAgents, redAgents);
         redAgents.emplace_back(std::move(redAgent));
 
         grid[y][x] = 1;
@@ -167,6 +166,7 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
         connect(redAgents[i].get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 }
+
 void GameField::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
 }
