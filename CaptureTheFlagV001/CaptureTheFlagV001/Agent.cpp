@@ -9,7 +9,7 @@
 #include <QGraphicsView>
 
 Agent::Agent(int x, int y, std::string side, int cols, int rows, std::vector<std::vector<int>>& grid, Pathfinder* pathfinder, float taggingDistance,
-    Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents)
+    Brain* brain, Memory* memory, GameManager* gameManager, std::vector<std::unique_ptr<Agent>>& blueAgents, std::vector<std::unique_ptr<Agent>>& redAgents)
     : x(x), y(y), side(side), cols(cols), rows(rows), grid(grid), pathfinder(pathfinder), taggingDistance(taggingDistance),
     brain(brain), memory(memory), gameManager(gameManager), _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true),
     previousX(x), previousY(y), stuckTimer(0) {}

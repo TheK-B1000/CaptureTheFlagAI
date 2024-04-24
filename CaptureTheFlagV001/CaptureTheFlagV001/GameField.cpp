@@ -206,7 +206,7 @@ void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
     scene->addItem(timeRemainingTextItem);
 
     // Start a timer to update agents
-    int gameDuration = 300; // 5 minutes in seconds
+    int gameDuration = 600; // 5 minutes in seconds
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
@@ -322,6 +322,26 @@ void GameField::handleFlagCapture(const QString& side) {
 }
 
 void GameField::updateAgents() {
+    std::vector<Agent*> blueAgentPointers;
+    for (const auto& agent : blueAgents) {
+        blueAgentPointers.push_back(agent.get());
+    }
+
+    std::vector<Agent*> redAgentPointers;
+    for (const auto& agent : redAgents) {
+        redAgentPointers.push_back(agent.get());
+    }
+
+    // Update blue agents
+    for (const auto& agent : blueAgents) {
+        agent->update(getAgentPositions(redAgents), redAgentPointers, blueAgents, redAgents);
+    }
+
+    // Update red agents
+    for (const auto& agent : redAgents) {
+        agent->update(getAgentPositions(blueAgents), blueAgentPointers, blueAgents, redAgents);
+    }
+
     qDebug() << "Updating agent positions";
     updateAgentPositions();
 
@@ -340,6 +360,14 @@ void GameField::updateAgents() {
     }
 
     this->viewport()->update();
+}
+
+std::vector<std::pair<int, int>> GameField::getAgentPositions(const std::vector<std::unique_ptr<Agent>>& agents) const {
+    std::vector<std::pair<int, int>> positions;
+    for (const auto& agent : agents) {
+        positions.emplace_back(agent->getX(), agent->getY());
+    }
+    return positions;
 }
 
 void GameField::handleGameTimerTimeout() {

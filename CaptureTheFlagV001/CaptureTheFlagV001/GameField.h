@@ -37,6 +37,7 @@ public:
 
 private slots:
     void updateAgents();
+    std::vector<std::pair<int, int>> getAgentPositions(const std::vector<std::unique_ptr<Agent>>& agents) const;
     void handleGameTimerTimeout();
     void handleFlagCapture(const QString& team);
 
