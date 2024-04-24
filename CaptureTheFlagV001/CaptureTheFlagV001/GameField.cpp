@@ -92,20 +92,7 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
 
 void GameField::clearAgents() {
     // Delete all existing agents
-    for (Agent* agent : blueAgents) {
-        if (agent) {
-            delete agent;
-            agent = nullptr;
-        }
-    }
-
-    for (Agent* agent : redAgents) {
-        if (agent) {
-            delete agent;
-            agent = nullptr;
-        }
-    }
-
+    blueAgents.clear();
     redAgents.clear();
 }
 
@@ -124,23 +111,26 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             }
         }
 
-        std::unique_ptr<Brain> blueBrain(new Brain());
+        std::unique_ptr<Brain> blueBrain = std::make_unique<Brain>();
         if (!blueBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
+            return;
         }
 
-        std::unique_ptr<Memory> blueMemory(new Memory());
+        std::unique_ptr<Memory> blueMemory = std::make_unique<Memory>();
         if (!blueMemory) {
             qDebug() << "Failed to allocate memory for Memory object";
+            return;
         }
 
-        std::unique_ptr<Agent> agent(new Agent(x, y, "blue", cols, grid, rows, pathfinder, taggingDistance, blueBrain.get(), blueMemory.get(), gameManager, blueAgents, redAgents));
-        blueAgents.push_back(agent.get()); // Add the raw pointer to the vector
+        std::unique_ptr<Agent> blueAgent = std::make_unique<Agent>(x, y, "blue", cols, rows, grid, pathfinder, taggingDistance, blueBrain.get(), blueMemory.get(), gameManager);
+        blueAgents.emplace_back(std::move(blueAgent));
+
         grid[y][x] = 1;
 
         // Connect signals and slots
-        connect(agent.get(), &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
-        connect(agent.get(), &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
+        connect(blueAgents[i].get(), &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
+        connect(blueAgents[i].get(), &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
     }
 
     // Initialize red agents
@@ -155,26 +145,28 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
             }
         }
 
-        std::unique_ptr<Brain> redBrain(new Brain());
+        std::unique_ptr<Brain> redBrain = std::make_unique<Brain>();
         if (!redBrain) {
             qDebug() << "Failed to allocate memory for Brain object";
+            return;
         }
 
-        std::unique_ptr<Memory> redMemory(new Memory());
+        std::unique_ptr<Memory> redMemory = std::make_unique<Memory>();
         if (!redMemory) {
             qDebug() << "Failed to allocate memory for Memory object";
+            return;
         }
 
-        std::unique_ptr<Agent> agent(new Agent(x, y, "red", cols, grid, rows, pathfinder, taggingDistance, redBrain.get(), redMemory.get(), gameManager, blueAgents, redAgents));
-        redAgents.push_back(agent.get()); // Add the raw pointer to the vector
+        std::unique_ptr<Agent> redAgent = std::make_unique<Agent>(x, y, "red", cols, rows, grid, pathfinder, taggingDistance, redBrain.get(), redMemory.get(), gameManager);
+        redAgents.emplace_back(std::move(redAgent));
+
         grid[y][x] = 1;
 
         // Connect signals and slots
-        connect(agent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-        connect(agent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
+        connect(redAgents[i].get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+        connect(redAgents[i].get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 }
-
 void GameField::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
 }
@@ -283,7 +275,16 @@ void GameField::runTestCase3() {
         // Update the grid to reflect the new team zone positions
         updateGridFromZones(blueZone, redZone);
 
-        updateAgentItemsPositions();
+        // Update the agent item positions
+        for (const auto& agent : blueAgents) {
+            QGraphicsItem* item = getAgentItem(agent.get());
+            updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
+        }
+
+        for (const auto& agent : redAgents) {
+            QGraphicsItem* item = getAgentItem(agent.get());
+            updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
+        }
     }
     else {
         qDebug() << "Error: Red or blue flag item not found in the scene";
@@ -307,12 +308,12 @@ void GameField::updateGridFromZones(QGraphicsEllipseItem* blueZone, QGraphicsEll
     }
 }
 
-void GameField::handleFlagCapture(const QString& team) {
-    if (team == "blue") {
+void GameField::handleFlagCapture(const QString& side) {
+    if (side == "blue") {
         blueScore++;
         resetEnemyFlag("red");
     }
-    else if (team == "red") {
+    else if (side == "red") {
         redScore++;
         resetEnemyFlag("blue");
     }
@@ -321,14 +322,22 @@ void GameField::handleFlagCapture(const QString& team) {
 }
 
 void GameField::updateAgents() {
-    qDebug() << "Updating agent positions"; 
+    qDebug() << "Updating agent positions";
     updateAgentPositions();
 
-    qDebug() << "Checking tagging"; 
+    qDebug() << "Checking tagging";
     checkTagging();
 
-    qDebug() << "Updating agent item positions"; 
-    updateAgentItemsPositions();
+    qDebug() << "Updating agent item positions";
+    for (const auto& agent : blueAgents) {
+        QGraphicsItem* item = getAgentItem(agent.get());
+        updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
+    }
+
+    for (const auto& agent : redAgents) {
+        QGraphicsItem* item = getAgentItem(agent.get());
+        updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
+    }
 
     this->viewport()->update();
 }
@@ -365,12 +374,12 @@ void GameField::stopGame() {
     gameTimer->stop();
 
     qDebug() << "Disabling blue agents";
-    for (Agent* agent : blueAgents) {
+    for (const auto& agent : blueAgents) {
         agent->setEnabled(false);
     }
 
     qDebug() << "Disabling red agents";
-    for (Agent* agent : redAgents) {
+    for (const auto& agent : redAgents) {
         agent->setEnabled(false);
     }
 }
@@ -403,64 +412,20 @@ void GameField::updateAgentPositions() {
     std::vector<std::pair<int, int>> bluePositions;
     std::vector<std::pair<int, int>> redPositions;
 
-    for (Agent* agent : blueAgents) {
-        int prevX = agent->getX();
-        int prevY = agent->getY();
+    for (const auto& agent : blueAgents) {
+        QGraphicsItem* item = getAgentItem(agent.get());
+        updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
+    }
 
-        // Update the agent's position
-        agent->update(redPositions, redAgents);
-
-        int newX = agent->getX();
-        int newY = agent->getY();
-
-        // Check if the agent's position is within the game field boundaries
-        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
-            // Clear the previous position in the grid
-            grid[prevY][prevX] = 0;
-
-            // Mark the new position as occupied
-            grid[newY][newX] = 1;
-
-            bluePositions.emplace_back(newX, newY);
-        }
-        else {
-            // If the new position is outside the boundaries, revert to the previous position
-            agent->setX(prevX);
-            agent->setY(prevY);
-            bluePositions.emplace_back(prevX, prevY);
-        }
+    for (const auto& agent : redAgents) {
+        QGraphicsItem* item = getAgentItem(agent.get());
+        updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
     }
 
     // Print blue agent positions for debugging
     qDebug() << "Blue agent positions:";
     for (const auto& pos : bluePositions) {
         qDebug() << "(" << pos.first << ", " << pos.second << ")";
-    }
-
-    for (Agent* agent : redAgents) {
-        int prevX = agent->getX();
-        int prevY = agent->getY();
-
-        // Update the agent's position
-        agent->update(bluePositions, blueAgents);
-
-        int newX = agent->getX();
-        int newY = agent->getY();
-
-        // Check if the agent's position is within the game field boundaries
-        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
-            // Update the grid representation only if the new position is valid
-            grid[prevY][prevX] = 0; // Mark the previous position as empty
-            grid[newY][newX] = 1; // Mark the new position as occupied
-
-            redPositions.emplace_back(newX, newY);
-        }
-        else {
-            // If the new position is outside the boundaries, revert to the previous position
-            agent->setX(prevX);
-            agent->setY(prevY);
-            redPositions.emplace_back(prevX, prevY);
-        }
     }
 
     // Print red agent positions for debugging
@@ -470,71 +435,41 @@ void GameField::updateAgentPositions() {
     }
 }
 
-void GameField::updateAgentItemsPositions() {
-    for (Agent* agent : blueAgents) {
-        QGraphicsItem* item = getAgentItem(agent);
-        if (item) {
-            qDebug() << "Blue agent at (" << agent->getX() << ", " << agent->getY() << ") - Item found with updateAgentItemsPositions";
-            item->setPos(agent->getX() * cellSize, agent->getY() * cellSize);
-            QGraphicsPolygonItem* agentItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item);
-            if (agentItem) {
-                if (agent->isTagged()) {
-                    QPen pen(Qt::yellow, 3);
-                    agentItem->setPen(pen);
-                }
-                else {
-                    QPen pen(Qt::black, 1);
-                    agentItem->setPen(pen);
-                }
+void GameField::updateAgentItemPositions(QGraphicsItem* item, const std::unique_ptr<Agent>& agent, int x, int y) {
+    if (item) {
+        qDebug() << "Agent at (" << x << ", " << y << ") - Item found with updateAgentItemPositions";
+        item->setPos(x * cellSize, y * cellSize);
 
-                if (agent->isCarryingFlag()) {
-                    agentItem->setBrush(Qt::cyan);
-                }
-                else {
-                    agentItem->setBrush(Qt::blue);
-                }
+        QGraphicsPolygonItem* agentItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item);
+        if (agentItem) {
+            // Update the agent item's appearance based on its state
+            if (agent->isTagged()) {
+                QPen pen(Qt::yellow, 3);
+                agentItem->setPen(pen);
             }
-        }
-        else {
-            qDebug() << "Agent item not found in the scene for blue agent at position (" << agent->getX() << ", " << agent->getY() << ") with updateAgentItemsPositions";
+            else {
+                QPen pen(Qt::black, 1);
+                agentItem->setPen(pen);
+            }
+
+            if (agent->isCarryingFlag()) {
+                agentItem->setBrush(agent->getSide() == "blue" ? Qt::cyan : Qt::magenta);
+            }
+            else {
+                agentItem->setBrush(agent->getSide() == "blue" ? Qt::blue : Qt::red);
+            }
         }
     }
-
-    for (Agent* agent : redAgents) {
-        QGraphicsItem* item = getAgentItem(agent);
-        if (item) {
-            qDebug() << "Red agent at (" << agent->getX() << ", " << agent->getY() << ") - Item found with updateAgentItemsPositions";
-            item->setPos(agent->getX() * cellSize, agent->getY() * cellSize);
-            QGraphicsPolygonItem* agentItem = qgraphicsitem_cast<QGraphicsPolygonItem*>(item);
-            if (agentItem) {
-                if (agent->isTagged()) {
-                    QPen pen(Qt::yellow, 3);
-                    agentItem->setPen(pen);
-                }
-                else {
-                    QPen pen(Qt::black, 1);
-                    agentItem->setPen(pen);
-                }
-
-                if (agent->isCarryingFlag()) {
-                    agentItem->setBrush(Qt::magenta);
-                }
-                else {
-                    agentItem->setBrush(Qt::red);
-                }
-            }
-        }
-        else {
-            qDebug() << "Agent item not found in the scene for red agent at position (" << agent->getX() << ", " << agent->getY() << ") with updateAgentItemsPositions";
-        }
+    else {
+        qDebug() << "Agent item not found in the scene for agent at position (" << x << ", " << y << ") with updateAgentItemPositions";
     }
 }
 
 void GameField::checkTagging() {
-    for (Agent* agent : blueAgents) {
+    for (const auto& agent : blueAgents) {
         if (agent->isOnEnemySide() && !agent->isTagged()) {
-            for (Agent* enemyAgent : redAgents) {
-                if (enemyAgent->checkInTeamZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent) <= taggingDistance) {
+            for (const auto& enemyAgent : redAgents) {
+                if (enemyAgent->checkInTeamZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent.get()) <= taggingDistance) {
                     agent->setIsTagged(true);
                     break;
                 }
@@ -542,10 +477,10 @@ void GameField::checkTagging() {
         }
     }
 
-    for (Agent* agent : redAgents) {
+    for (const auto& agent : redAgents) {
         if (agent->isOnEnemySide() && !agent->isTagged()) {
-            for (Agent* enemyAgent : blueAgents) {
-                if (enemyAgent->checkInTeamZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent) <= taggingDistance) {
+            for (const auto& enemyAgent : blueAgents) {
+                if (enemyAgent->checkInTeamZone() && !enemyAgent->isTagged() && agent->distanceTo(enemyAgent.get()) <= taggingDistance) {
                     agent->setIsTagged(true);
                     break;
                 }
@@ -571,22 +506,22 @@ QGraphicsItem* GameField::getAgentItem(Agent* agent) {
     return nullptr;
 }
 
-void GameField::updateAgentItem(QGraphicsItem* item, const std::vector<Agent*>& agents, QColor color) {
+void GameField::updateSceneItems() {
+    for (QGraphicsItem* item : scene->items()) {
+        updateAgentItem(item, blueAgents, Qt::blue);
+        updateAgentItem(item, redAgents, Qt::red);
+    }
+}
+
+void GameField::updateAgentItem(QGraphicsItem* item, const std::vector<std::unique_ptr<Agent>>& agents, QColor color) {
     if (QGraphicsEllipseItem* agentItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
-        for (Agent* agent : agents) {
+        for (const auto& agent : agents) {
             if (agentItem->brush().color() == color) {
                 int x = agent->getX() * cellSize;
                 int y = agent->getY() * cellSize;
                 agentItem->setRect(x - 10, y - 10, 20, 20);
             }
         }
-    }
-}
-
-void GameField::updateSceneItems() {
-    for (QGraphicsItem* item : scene->items()) {
-        updateAgentItem(item, blueAgents, Qt::blue);
-        updateAgentItem(item, redAgents, Qt::red);
     }
 }
 
@@ -605,7 +540,7 @@ void GameField::resetEnemyFlag(const QString& team) {
         }
 
         // Reset the carrying flag state of blue agents
-        for (Agent* agent : blueAgents) {
+        for (const auto& agent : blueAgents) {
             agent->setCarryingFlag(false);
         }
     }
@@ -623,7 +558,7 @@ void GameField::resetEnemyFlag(const QString& team) {
         }
 
         // Reset the carrying flag state of red agents
-        for (Agent* agent : redAgents) {
+        for (const auto& agent : redAgents) {
             agent->setCarryingFlag(false);
         }
     }
@@ -780,7 +715,7 @@ void GameField::setupScene() {
     gameManager->setTeamZonePosition("red", redZoneGridPosition.first, redZoneGridPosition.second);
 
     // Add agents
-    for (Agent* agent : blueAgents) {
+    for (const auto& agent : blueAgents) {
         int col = agent->getX();
         int row = agent->getY();
         int x = col * cellSize;
@@ -790,10 +725,10 @@ void GameField::setupScene() {
         if (col >= 0 && col < cols / 2 && row >= 0 && row < rows) {
             QGraphicsEllipseItem* blueAgent = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
             blueAgent->setBrush(Qt::blue);
-            blueAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent)));
+            blueAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent.get())));
             scene->addItem(blueAgent);
             qDebug() << "Blue agent (SetupScene) added at position (" << x << ", " << y << ")";
-            qDebug() << "Agent pointer from SetupScene:" << agent;
+            qDebug() << "Agent pointer from SetupScene:" << agent.get();
             qDebug() << "Item data from SetupScene:" << blueAgent->data(0).value<quintptr>();
         }
         else {
@@ -801,7 +736,7 @@ void GameField::setupScene() {
         }
     }
 
-    for (Agent* agent : redAgents) {
+    for (const auto& agent : redAgents) {
         int col = agent->getX();
         int row = agent->getY();
         int x = col * cellSize;
@@ -811,10 +746,10 @@ void GameField::setupScene() {
         if (col >= cols / 2 && col < cols && row >= 0 && row < rows) {
             QGraphicsEllipseItem* redAgent = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
             redAgent->setBrush(Qt::red);
-            redAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent)));
+            redAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent.get())));
             scene->addItem(redAgent);
             qDebug() << "Red agent (SetupScene) added at position (" << x << ", " << y << ")";
-            qDebug() << "Agent pointer from SetupScene:" << agent;
+            qDebug() << "Agent pointer from SetupScene:" << agent.get();
             qDebug() << "Item data from SetupScene:" << redAgent->data(0).value<quintptr>();
         }
         else {
@@ -826,7 +761,7 @@ void GameField::setupScene() {
     qDebug() << "Number of red agent items added:" << redAgents.size();
 
     // Adjust agent positions if they are outside the game field boundaries
-    for (Agent* agent : blueAgents) {
+    for (const auto& agent : blueAgents) {
         int x = agent->getX();
         int y = agent->getY();
         if (x < 0 || x >= cols || y < 0 || y >= rows) {
@@ -839,7 +774,7 @@ void GameField::setupScene() {
         }
     }
 
-    for (Agent* agent : redAgents) {
+    for (const auto& agent : redAgents) {
         int x = agent->getX();
         int y = agent->getY();
         if (x < 0 || x >= cols || y < 0 || y >= rows) {
@@ -854,19 +789,17 @@ void GameField::setupScene() {
 }
 
 GameField::~GameField() {
-    delete pathfinder;
-
-    // Delete Agent objects
-    for (Agent* agent : blueAgents) {
-        delete agent;
+    if (pathfinder) {
+        delete pathfinder;
     }
+    pathfinder = nullptr;
 
-    for (Agent* agent : redAgents) {
-        delete agent;
-    }
-
+    // Assuming agents are now managed via unique_ptr, no need to delete them
     blueAgents.clear();
     redAgents.clear();
 
-    delete gameManager;
+    if (gameManager) {
+        delete gameManager;
+    }
+    gameManager = nullptr;
 }

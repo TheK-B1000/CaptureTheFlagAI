@@ -31,18 +31,17 @@ private:
     float taggingDistance;
     std::vector<std::pair<int, int>> path;
     bool _isEnabled;
-    std::vector<Agent*> blueAgents;
-    std::vector<Agent*> redAgents;
     int previousX, previousY;
     int stuckTimer;
     static const int stuckThreshold = 5;
     std::string side;
 
 public:
-    Agent(int x, int y, std::string side, int cols, std::vector<std::vector<int>>& grid, int rows, Pathfinder* pathfinder, float taggingDistance, Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents);
-    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents);
+    Agent(int x, int y, std::string side, int cols, int rows, std::vector<std::vector<int>>& grid, Pathfinder* pathfinder, float taggingDistance,
+        Brain* brain, Memory* memory, GameManager* gameManager, std::vector<Agent*> blueAgents, std::vector<Agent*> redAgents);
+    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents);
     void updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions);
-    void handleFlagInteractions();
+    void handleFlagInteractions(const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents);
     void handleCooldownTimer();
     bool isOpponentCarryingFlag() const;
     std::pair<int, int> getEnemyFlagPosition() const;
@@ -72,11 +71,9 @@ public:
     void setY(int newY);
     void setEnabled(bool enabled);
     void decrementCooldownTimer();
-    const std::vector<Agent*>& getBlueAgents() const { return blueAgents; }
-    const std::vector<Agent*>& getRedAgents() const { return redAgents; }
     Brain* getBrain() const { return brain; }
     Memory* getMemory() const { return memory; }
-    bool isTeamCarryingFlag(const std::vector<Agent*>& blueAgents, const std::vector<Agent*>& redAgents);
+    bool isTeamCarryingFlag(const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents);
     std::string getSide() const { return side; }
     float getTaggingDistance() const { return taggingDistance; }
     int getCooldownTimer() const { return cooldownTimer; }
