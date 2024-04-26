@@ -9,10 +9,10 @@
 #include <QGraphicsView>
 #include <memory>
 
-Agent::Agent(int x, int y, std::string side, int cols, int rows, std::vector<std::vector<int>>& grid, Pathfinder* pathfinder, float taggingDistance,
+Agent::Agent(int x, int y, std::string side, int gameFieldWidth, int gameFieldHeight, Pathfinder* pathfinder, float taggingDistance,
     const std::shared_ptr<Brain>& brain, const std::shared_ptr<Memory>& memory, GameManager* gameManager,
     std::vector<std::shared_ptr<Agent>>& blueAgents, std::vector<std::shared_ptr<Agent>>& redAgents)
-    : x(x), y(y), side(side), cols(cols), rows(rows), grid(grid), pathfinder(pathfinder), taggingDistance(taggingDistance),
+    : x(x), y(y), side(side), gameFieldWidth(gameFieldWidth), gameFieldHeight(gameFieldHeight), pathfinder(pathfinder), taggingDistance(taggingDistance),
     brain(brain), memory(memory), gameManager(gameManager), _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true),
     previousX(x), previousY(y), stuckTimer(0) {}
 
@@ -80,24 +80,21 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
 
     // Validate the new position before updating
     if (isValidPosition(x, y)) {
-        // Update the grid representation
-        grid[previousY][previousX] = 0; // Mark the previous position as empty
-        grid[y][x] = 1; // Mark the new position as occupied
+        // Update the previous position
+        previousX = x;
+        previousY = y;
     }
     else {
-        // The new position is outside the grid boundaries
+        // The new position is outside the game field boundaries
         // Adjust the position to the nearest valid position or prevent the movement
         // Example: Clamp the position to the nearest valid position
-        x = std::max(0, std::min(x, cols - 1));
-        y = std::max(0, std::min(y, rows - 1));
+        x = std::max(0, std::min(x, gameFieldWidth - 1));
+        y = std::max(0, std::min(y, gameFieldHeight - 1));
     }
 
-    previousX = x;
-    previousY = y;
     handleFlagInteractions(blueAgents, redAgents);
     handleCooldownTimer();
 }
-
 
 void Agent::updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions) {
     // checks every ai agents position
@@ -203,7 +200,7 @@ float Agent::distanceToEnemyFlag() const {
     std::pair<int, int> enemyFlagPos = getEnemyFlagPosition();
 
     // Calculate the distance between the agent and the enemy flag
-    return std::hypot(enemyFlagPos.first - x, enemyFlagPos.second - y) * FIELD_WIDTH / GRID_SIZE;
+    return std::hypot(enemyFlagPos.first - x, enemyFlagPos.second - y);
 }
 
 float Agent::distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const {
@@ -236,8 +233,8 @@ void Agent::exploreField() {
     }
     else {
         // Generate a new random target position within the game field boundaries
-        int targetX = std::rand() % cols;
-        int targetY = std::rand() % (rows - 1);  // Avoid the bottom row
+        int targetX = std::rand() % gameFieldWidth;
+        int targetY = std::rand() % (gameFieldHeight - 1);  // Avoid the bottom row
 
         // Calculate a new path to the target position
         path = pathfinder->findPath(x, y, targetX, targetY);
@@ -274,7 +271,7 @@ void Agent::moveTowardsEnemyFlag() {
         y = nextStep.second;
         qDebug() << "Moved to (" << x << ", " << y << ")";
 
-        if (distanceToEnemyFlag() <= 1) {
+        if (distanceToEnemyFlag() <= 10) {
             qDebug() << "Flag within reach, attempting to grab.";
             if (grabFlag()) {
                 qDebug() << "Flag captured!";
@@ -283,7 +280,6 @@ void Agent::moveTowardsEnemyFlag() {
         }
     }
 }
-
 
 void Agent::moveTowardsHomeZone() {
     std::pair<int, int> homePos = gameManager->getTeamZonePosition(side);
@@ -302,7 +298,7 @@ void Agent::moveTowardsHomeZone() {
             path.erase(path.begin());
         }
         else {
-            // The new position is outside the grid boundaries
+            // The new position is outside the game field boundaries
             // Adjust the position to the nearest valid position or prevent the movement
             // Example: Respawn the agent in the team area
             findAlternativePath();
@@ -326,17 +322,17 @@ void Agent::chaseOpponentWithFlag(const std::vector<std::pair<int, int>>& otherA
     }
 
     if (opponentWithFlag.first != -1 && opponentWithFlag.second != -1) {
-        int opponentX = std::max(0, std::min(opponentWithFlag.first, pathfinder->getCols() - 1));
-        int opponentY = std::max(0, std::min(opponentWithFlag.second, pathfinder->getRows() - 1));
+        int opponentX = std::max(0, std::min(opponentWithFlag.first, gameFieldWidth - 1));
+        int opponentY = std::max(0, std::min(opponentWithFlag.second, gameFieldHeight - 1));
 
         path = pathfinder->findPath(x, y, opponentX, opponentY);
         if (!path.empty()) {
             std::pair<int, int> nextStep = path.front();
-            int newX = std::max(0, std::min(nextStep.first, pathfinder->getCols() - 1));
-            int newY = std::max(0, std::min(nextStep.second, pathfinder->getRows() - 1));
+            int newX = std::max(0, std::min(nextStep.first, gameFieldWidth - 1));
+            int newY = std::max(0, std::min(nextStep.second, gameFieldHeight - 1));
 
             // Check if the new position is within the game field boundaries
-            if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+            if (newX >= 0 && newX < gameFieldWidth && newY >= 0 && newY < gameFieldHeight) {
                 qDebug() << "Agent at (" << x << ", " << y << ") moving to (" << newX << ", " << newY << ") to chase the opponent with the flag.";
                 x = newX;
                 y = newY;
@@ -386,7 +382,6 @@ bool Agent::grabFlag() {
     }
     return false;
 }
-
 bool Agent::captureFlag() {
     if (_isCarryingFlag && checkInTeamZone() && !_isTagged) {
         _isCarryingFlag = false;
@@ -435,7 +430,7 @@ bool Agent::checkInTeamZone() const {
 
 void Agent::findAlternativePath() {
     // Check if the agent is near the bottom boundary
-    if (y >= rows - 1) {
+    if (y >= gameFieldHeight - 1) {
         // Move horizontally towards the enemy flag
         int flagX = gameManager->getEnemyFlagPosition(side).first;
         if (x < flagX) {
@@ -458,7 +453,7 @@ void Agent::findAlternativePath() {
 }
 
 bool Agent::isValidPosition(int newX, int newY) const {
-    return newX >= 0 && newX < cols && newY >= 0 && newY < rows;
+    return newX >= 0 && newX < gameFieldWidth && newY >= 0 && newY < gameFieldHeight;
 }
 
 void Agent::setX(int newX) {

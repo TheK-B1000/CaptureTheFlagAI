@@ -9,8 +9,8 @@
 #include <QDebug>
 #include <qlogging.h>
 
-Pathfinder::Pathfinder(const std::vector<std::vector<int>>& grid, int rows, int cols)
-    : grid(grid), rows(rows), cols(cols) {
+Pathfinder::Pathfinder(int gameFieldWidth, int gameFieldHeight)
+    : gameFieldWidth(gameFieldWidth), gameFieldHeight(gameFieldHeight) {
 }
 
 void Pathfinder::setDynamicObstacles(const std::vector<std::pair<int, int>>& obstacles) {
@@ -61,7 +61,7 @@ std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, in
 
         for (const auto& neighbor : getNeighbors(current.first, current.second)) {
             // Check if the neighbor position is within the game field boundaries
-            if (neighbor.first >= 0 && neighbor.first < cols && neighbor.second >= 0 && neighbor.second < rows) {
+            if (isValidPosition(neighbor.first, neighbor.second)) {
                 double tentativeGScore = gScore[current] + 1;
 
                 if (gScore.find(neighbor) == gScore.end() || tentativeGScore < gScore[neighbor]) {
@@ -89,7 +89,7 @@ std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y) {
         int newY = y + dy[i];
 
         // Check if the neighbor position is within the game field boundaries
-        if (newX >= 0 && newX < cols && newY >= 0 && newY < rows) {
+        if (isValidPosition(newX, newY)) {
             // Check if the neighbor position is not occupied by another AI agent
             if (std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(newX, newY)) == dynamicObstacles.end()) {
                 neighbors.push_back({ newX, newY });
@@ -102,9 +102,9 @@ std::vector<std::pair<int, int>> Pathfinder::getNeighbors(int x, int y) {
 
 std::pair<int, int> Pathfinder::getRandomFreePosition() {
     std::vector<std::pair<int, int>> freePositions;
-    for (int x = 0; x < cols; ++x) {
-        for (int y = 0; y < rows; ++y) {
-            if (grid[y][x] != 1 && std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(x, y)) == dynamicObstacles.end()) {
+    for (int x = 0; x < gameFieldWidth; ++x) {
+        for (int y = 0; y < gameFieldHeight; ++y) {
+            if (std::find(dynamicObstacles.begin(), dynamicObstacles.end(), std::make_pair(x, y)) == dynamicObstacles.end()) {
                 freePositions.push_back({ x, y });
             }
         }
@@ -114,4 +114,8 @@ std::pair<int, int> Pathfinder::getRandomFreePosition() {
         return freePositions[randomIndex];
     }
     return { -1, -1 };
+}
+
+bool Pathfinder::isValidPosition(int x, int y) {
+    return x >= 0 && x < gameFieldWidth && y >= 0 && y < gameFieldHeight;
 }

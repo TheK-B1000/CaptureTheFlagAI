@@ -1,15 +1,15 @@
 #include "Driver.h"
 #include "GameField.h"
+
 #include <QMenuBar>
 #include <QAction>
 #include <QInputDialog>
 
 Driver::Driver(QWidget* parent) : QMainWindow(parent), gameField(nullptr) {
-    int rows = 30;
-    int cols = 40;
-    std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
+    int gameFieldWidth = 800;
+    int gameFieldHeight = 600;
 
-    gameField = new GameField(this, grid);
+    gameField = new GameField(this, gameFieldWidth, gameFieldHeight);
     gameManager = gameField->getGameManager();
 
     setCentralWidget(gameField);

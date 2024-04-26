@@ -2,7 +2,7 @@
 
 GameManager::GameManager(int cols, int rows)
     : cols(cols), rows(rows),
-    blueFlagPosition(3, 14), // Set the correct initial position for the blue flag
+    blueFlagPosition(35, 3), // Set the correct initial position for the blue flag
     redFlagPosition(35, 14), // Set the correct initial position for the red flag
     blueTeamZonePosition(0, rows / 2),
     redTeamZonePosition(cols - 1, rows / 2) {}
@@ -33,11 +33,6 @@ std::pair<int, int> GameManager::getEnemyFlagPosition(const std::string& side) c
     return (side == "blue") ? redFlagPosition : blueFlagPosition;
 }
 std::pair<int, int> GameManager::getTeamZonePosition(const std::string& side) const {
-    if (side.empty()) {
-        // Handle the case where the side is an empty string
-        return std::make_pair(-1, -1);
-    }
-
     int teamZoneRadius = 40; // Radius of the team zone (half of the team zone diameter)
 
     // Get the current flag position based on the agent's side

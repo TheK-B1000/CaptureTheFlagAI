@@ -2,39 +2,25 @@
 #define PATHFINDER_H
 
 #include <vector>
-#include <unordered_map>
 #include <utility>
-#include <cstdlib>
-#include <algorithm>
-
+#include <unordered_map>
+#include "Memory.h"
 
 class Pathfinder {
-private:
-    std::vector<std::vector<int>> grid;
-    int rows, cols;
-    std::vector<std::pair<int, int>> dynamicObstacles;
-
-    double calculateHeuristic(int x1, int y1, int x2, int y2);
-    std::vector<std::pair<int, int>> getNeighbors(int x, int y);
-
 public:
-    Pathfinder(const std::vector<std::vector<int>>& grid, int rows, int cols);
-
+    Pathfinder(int gameFieldWidth, int gameFieldHeight);
     void setDynamicObstacles(const std::vector<std::pair<int, int>>& obstacles);
     std::vector<std::pair<int, int>> findPath(int startX, int startY, int goalX, int goalY);
     std::pair<int, int> getRandomFreePosition();
 
-    std::vector<std::vector<int>> getGrid() const {
-        return grid;
-    }
+private:
+    int gameFieldWidth;
+    int gameFieldHeight;
+    std::vector<std::pair<int, int>> dynamicObstacles;
 
-    int getRows() const {
-        return rows;
-    }
-
-    int getCols() const {
-        return cols;
-    }
+    double calculateHeuristic(int x1, int y1, int x2, int y2);
+    std::vector<std::pair<int, int>> getNeighbors(int x, int y);
+    bool isValidPosition(int x, int y);
 };
 
-#endif
+#endif // PATHFINDER_H
