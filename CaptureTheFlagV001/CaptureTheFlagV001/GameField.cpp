@@ -48,7 +48,7 @@ GameField::GameField(QWidget* parent, const std::vector<std::vector<int>>& grid)
     }
 
     // Set up the agents before setting up the scene
-    setupAgents(4, 4, cols, gameManager);
+   // setupAgents(4, 4, cols, rows, gameManager);
 
     // Set up the scene after setting up the agents
     setupScene();
@@ -96,76 +96,72 @@ void GameField::clearAgents() {
     redAgents.clear();
 }
 
-void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager) {
+void GameField::setupAgents(int blueCount, int redCount, int cols, int rows, GameManager* gameManager) {
     qDebug() << "setupAgents called with blueCount:" << blueCount << "and redCount:" << redCount;
 
     // Initialize blue agents
     for (int i = 0; i < blueCount; i++) {
         int x, y;
+        int gridX, gridY;
         bool validPosition = false;
+
         while (!validPosition) {
-            x = QRandomGenerator::global()->bounded(1, cols / 2 - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 2);
-            if (x > 0 && x < cols - 1 && y > 0 && y < rows - 1 && grid[y][x] != 1) {
+            x = 20 + QRandomGenerator::global()->bounded(0, (cols / 2) - 1) * cellSize;
+            y = 100 + QRandomGenerator::global()->bounded(0, rows - 1) * cellSize;
+
+            // Adjust x and y to grid coordinates
+            gridX = (x - 20) / cellSize;
+            gridY = (y - 100) / cellSize;
+
+            if (gridX >= 0 && gridX < cols / 2 && gridY >= 0 && gridY < rows && grid[gridY][gridX] != 1) {
                 validPosition = true;
             }
         }
 
-        std::unique_ptr<Brain> blueBrain = std::make_unique<Brain>();
-        if (!blueBrain) {
-            qDebug() << "Failed to allocate memory for Brain object";
-            return;
-        }
+        // Construct the blue agent and add to the list
+        auto blueBrain = std::make_shared<Brain>();
+        auto blueMemory = std::make_shared<Memory>();
+        auto agent = std::make_shared<Agent>(gridX, gridY, "blue", cols, rows, grid, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
+        blueAgents.push_back(agent);
+        grid[gridY][gridX] = 1;
 
-        std::unique_ptr<Memory> blueMemory = std::make_unique<Memory>();
-        if (!blueMemory) {
-            qDebug() << "Failed to allocate memory for Memory object";
-            return;
-        }
-        std::unique_ptr<Agent> blueAgent = std::make_unique<Agent>(x, y, "blue", cols, rows, grid, pathfinder, taggingDistance, blueBrain.get(), blueMemory.get(), gameManager, blueAgents, redAgents);
-        blueAgents.emplace_back(std::move(blueAgent));
-
-        grid[y][x] = 1;
-
-        // Connect signals and slots
-        connect(blueAgents[i].get(), &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
-        connect(blueAgents[i].get(), &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
+        // Connect signals
+        connect(agent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+        connect(agent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 
     // Initialize red agents
     for (int i = 0; i < redCount; i++) {
         int x, y;
+        int gridX, gridY;
         bool validPosition = false;
+
         while (!validPosition) {
-            x = QRandomGenerator::global()->bounded(cols / 2, cols - 2);
-            y = QRandomGenerator::global()->bounded(1, rows - 2);
-            if (x > 0 && x < cols - 1 && y > 0 && y < rows - 1 && grid[y][x] != 1) {
+            x = 600 + QRandomGenerator::global()->bounded(0, cols - 2) * cellSize;
+            y = 100 + QRandomGenerator::global()->bounded(0, rows - 2) * cellSize;
+
+            // Adjust x and y to grid coordinates
+            gridX = (x - 600) / cellSize;
+            gridY = (y - 100) / cellSize;
+
+            if (gridX >= cols / 2 && gridX < cols && gridY >= 0 && gridY < rows && grid[gridY][gridX] != 1) {
                 validPosition = true;
             }
         }
 
-        std::unique_ptr<Brain> redBrain = std::make_unique<Brain>();
-        if (!redBrain) {
-            qDebug() << "Failed to allocate memory for Brain object";
-            return;
-        }
+        // Construct the red agent and add to the list
+        auto redBrain = std::make_shared<Brain>();
+        auto redMemory = std::make_shared<Memory>();
+        auto agent = std::make_shared<Agent>(gridX, gridY, "red", cols, rows, grid, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
+        redAgents.push_back(agent);
+        grid[gridY][gridX] = 1;
 
-        std::unique_ptr<Memory> redMemory = std::make_unique<Memory>();
-        if (!redMemory) {
-            qDebug() << "Failed to allocate memory for Memory object";
-            return;
-        }
-
-        std::unique_ptr<Agent> redAgent = std::make_unique<Agent>(x, y, "red", cols, rows, grid, pathfinder, taggingDistance, redBrain.get(), redMemory.get(), gameManager, blueAgents, redAgents);
-        redAgents.emplace_back(std::move(redAgent));
-
-        grid[y][x] = 1;
-
-        // Connect signals and slots
-        connect(redAgents[i].get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-        connect(redAgents[i].get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
+        // Connect signals
+        connect(agent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+        connect(agent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 }
+
 
 void GameField::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
@@ -175,7 +171,7 @@ void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
     clearAgents();
     int blueCount = agentCount / 2;
     int redCount = agentCount - blueCount;
-    setupAgents(blueCount, redCount, grid[0].size(), gameManager);
+    setupAgents(blueCount, redCount, grid[0].size(), grid.size(), gameManager);
     setupScene();
     updateSceneItems();
 
@@ -206,7 +202,7 @@ void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
     scene->addItem(timeRemainingTextItem);
 
     // Start a timer to update agents
-    int gameDuration = 600; // 5 minutes in seconds
+    int gameDuration = 600; // 10 minutes in seconds
     timeRemaining = gameDuration;
     blueScore = 0;
     redScore = 0;
@@ -362,7 +358,7 @@ void GameField::updateAgents() {
     this->viewport()->update();
 }
 
-std::vector<std::pair<int, int>> GameField::getAgentPositions(const std::vector<std::unique_ptr<Agent>>& agents) const {
+std::vector<std::pair<int, int>> GameField::getAgentPositions(const std::vector<std::shared_ptr<Agent>>& agents) const {
     std::vector<std::pair<int, int>> positions;
     for (const auto& agent : agents) {
         positions.emplace_back(agent->getX(), agent->getY());
@@ -463,7 +459,7 @@ void GameField::updateAgentPositions() {
     }
 }
 
-void GameField::updateAgentItemPositions(QGraphicsItem* item, const std::unique_ptr<Agent>& agent, int x, int y) {
+void GameField::updateAgentItemPositions(QGraphicsItem* item, const std::shared_ptr<Agent>& agent, int x, int y) {
     if (item) {
         qDebug() << "Agent at (" << x << ", " << y << ") - Item found with updateAgentItemPositions";
         item->setPos(x * cellSize, y * cellSize);
@@ -541,7 +537,7 @@ void GameField::updateSceneItems() {
     }
 }
 
-void GameField::updateAgentItem(QGraphicsItem* item, const std::vector<std::unique_ptr<Agent>>& agents, QColor color) {
+void GameField::updateAgentItem(QGraphicsItem* item, const std::vector<std::shared_ptr<Agent>>& agents, QColor color) {
     if (QGraphicsEllipseItem* agentItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
         for (const auto& agent : agents) {
             if (agentItem->brush().color() == color) {
@@ -732,6 +728,9 @@ void GameField::setupScene() {
     gameManager->setFlagPosition("blue", blueFlagGridPosition.first, blueFlagGridPosition.second);
     gameManager->setFlagPosition("red", redFlagGridPosition.first, redFlagGridPosition.second);
 
+    qDebug() << "Blue flag grid position: (" << blueFlagGridPosition.first << ", " << blueFlagGridPosition.second << ")";
+    qDebug() << "Red flag grid position: (" << redFlagGridPosition.first << ", " << redFlagGridPosition.second << ")";
+
     // Update the GameManager with the team zone positions
     QPointF blueZoneCenter = blueZone->rect().center();
     QPointF redZoneCenter = redZone->rect().center();
@@ -742,76 +741,61 @@ void GameField::setupScene() {
     gameManager->setTeamZonePosition("blue", blueZoneGridPosition.first, blueZoneGridPosition.second);
     gameManager->setTeamZonePosition("red", redZoneGridPosition.first, redZoneGridPosition.second);
 
-    // Add agents
-    for (const auto& agent : blueAgents) {
-        int col = agent->getX();
-        int row = agent->getY();
-        int x = col * cellSize;
-        int y = row * cellSize;
+    // Spawn blue agents in a square formation on the top left of the blue side
+    int blueStartX = 50;
+    int blueStartY = 50;
+    int blueSpacing = 30;
 
-        // Check if the agent's position is within the valid range
-        if (col >= 0 && col < cols / 2 && row >= 0 && row < rows) {
-            QGraphicsEllipseItem* blueAgent = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
-            blueAgent->setBrush(Qt::blue);
-            blueAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent.get())));
-            scene->addItem(blueAgent);
-            qDebug() << "Blue agent (SetupScene) added at position (" << x << ", " << y << ")";
-            qDebug() << "Agent pointer from SetupScene:" << agent.get();
-            qDebug() << "Item data from SetupScene:" << blueAgent->data(0).value<quintptr>();
-        }
-        else {
-            qDebug() << "Blue agent position (" << col << ", " << row << ") is outside the valid range";
-        }
-    }
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+            int x = blueStartX + j * blueSpacing;
+            int y = blueStartY + i * blueSpacing;
 
-    for (const auto& agent : redAgents) {
-        int col = agent->getX();
-        int row = agent->getY();
-        int x = col * cellSize;
-        int y = row * cellSize;
+            std::shared_ptr<Brain> blueBrain = std::make_shared<Brain>();
+            std::shared_ptr<Memory> blueMemory = std::make_shared<Memory>();
+            std::shared_ptr<Agent> blueAgent = std::make_shared<Agent>(x / cellSize, y / cellSize, "blue", cols, rows, grid, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
+            blueAgents.push_back(blueAgent);
 
-        // Check if the agent's position is within the valid range
-        if (col >= cols / 2 && col < cols && row >= 0 && row < rows) {
-            QGraphicsEllipseItem* redAgent = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
-            redAgent->setBrush(Qt::red);
-            redAgent->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent.get())));
-            scene->addItem(redAgent);
-            qDebug() << "Red agent (SetupScene) added at position (" << x << ", " << y << ")";
-            qDebug() << "Agent pointer from SetupScene:" << agent.get();
-            qDebug() << "Item data from SetupScene:" << redAgent->data(0).value<quintptr>();
-        }
-        else {
-            qDebug() << "Red agent position (" << col << ", " << row << ") is outside the valid range";
+            grid[y / cellSize][x / cellSize] = 1;
+
+            // Create the visual representation of the blue agent
+            QGraphicsEllipseItem* blueAgentItem = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
+            blueAgentItem->setBrush(Qt::blue);
+            blueAgentItem->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(blueAgent.get())));
+            scene->addItem(blueAgentItem);
+
+            // Connect signals for the blue agent
+            connect(blueAgent.get(), &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
+            connect(blueAgent.get(), &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
         }
     }
 
-    qDebug() << "Number of blue agent items added:" << blueAgents.size();
-    qDebug() << "Number of red agent items added:" << redAgents.size();
+    // Spawn red agents in a square formation on the bottom right of the red side
+    int redStartX = 650;
+    int redStartY = 450;
+    int redSpacing = 30;
 
-    // Adjust agent positions if they are outside the game field boundaries
-    for (const auto& agent : blueAgents) {
-        int x = agent->getX();
-        int y = agent->getY();
-        if (x < 0 || x >= cols || y < 0 || y >= rows) {
-            do {
-                x = QRandomGenerator::global()->bounded(1, cols / 2 - 2);
-                y = QRandomGenerator::global()->bounded(1, rows - 1);
-            } while (grid[y][x] != 0);
-            agent->setX(x);
-            agent->setY(y);
-        }
-    }
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+            int x = redStartX + j * redSpacing;
+            int y = redStartY + i * redSpacing;
 
-    for (const auto& agent : redAgents) {
-        int x = agent->getX();
-        int y = agent->getY();
-        if (x < 0 || x >= cols || y < 0 || y >= rows) {
-            do {
-                x = QRandomGenerator::global()->bounded(cols / 2 + 1, cols - 2);
-                y = QRandomGenerator::global()->bounded(1, rows - 1);
-            } while (grid[y][x] != 0);
-            agent->setX(x);
-            agent->setY(y);
+            std::shared_ptr<Brain> redBrain = std::make_shared<Brain>();
+            std::shared_ptr<Memory> redMemory = std::make_shared<Memory>();
+            std::shared_ptr<Agent> redAgent = std::make_shared<Agent>((x - 600) / cellSize, (y - 400) / cellSize, "red", cols, rows, grid, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
+            redAgents.push_back(redAgent);
+
+            grid[(y - 400) / cellSize][(x - 600) / cellSize] = 1;
+
+            // Create the visual representation of the red agent
+            QGraphicsEllipseItem* redAgentItem = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
+            redAgentItem->setBrush(Qt::red);
+            redAgentItem->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(redAgent.get())));
+            scene->addItem(redAgentItem);
+
+            // Connect signals for the red agent
+            connect(redAgent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+            connect(redAgent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
         }
     }
 }
@@ -822,7 +806,7 @@ GameField::~GameField() {
     }
     pathfinder = nullptr;
 
-    // Assuming agents are now managed via unique_ptr, no need to delete them
+    // Assuming agents are now managed via shared_ptr, no need to delete them
     blueAgents.clear();
     redAgents.clear();
 

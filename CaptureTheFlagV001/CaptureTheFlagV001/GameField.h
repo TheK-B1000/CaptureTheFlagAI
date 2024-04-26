@@ -17,8 +17,8 @@ public:
     ~GameField();
 
     // Getter functions
-    const std::vector<std::unique_ptr<Agent>>& getBlueAgents() const { return blueAgents; }
-    const std::vector<std::unique_ptr<Agent>>& getRedAgents() const { return redAgents; }
+    const std::vector<std::shared_ptr<Agent>>& getBlueAgents() const;
+    const std::vector<std::shared_ptr<Agent>>& getRedAgents() const;
     GameManager* getGameManager() const { return gameManager; }
     int getCols() const { return cols; }
     const std::vector<std::vector<int>>& getGrid() const { return grid; }
@@ -28,7 +28,7 @@ public:
     QGraphicsScene* getScene() const { return scene; }
 
     void clearAgents();
-    void setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager);
+    void setupAgents(int blueCount, int redCount, int cols, int rows, GameManager* gameManager);
     bool isValidPosition(int x, int y);
 
     void runTestCase1();
@@ -37,7 +37,7 @@ public:
 
 private slots:
     void updateAgents();
-    std::vector<std::pair<int, int>> getAgentPositions(const std::vector<std::unique_ptr<Agent>>& agents) const;
+    std::vector<std::pair<int, int>> getAgentPositions(const std::vector<std::shared_ptr<Agent>>& agents) const;
     void handleGameTimerTimeout();
     void handleFlagCapture(const QString& team);
 
@@ -47,8 +47,8 @@ private:
     void updateGridFromZones(QGraphicsEllipseItem* blueZone, QGraphicsEllipseItem* redZone);
 
     QGraphicsScene* scene;
-    std::vector<std::unique_ptr<Agent>> blueAgents;
-    std::vector<std::unique_ptr<Agent>> redAgents;
+    std::vector<std::shared_ptr<Agent>> blueAgents;
+    std::vector<std::shared_ptr<Agent>> redAgents;
     int gameFieldWidth;
     int gameFieldHeight;
     Pathfinder* pathfinder;
@@ -69,10 +69,10 @@ private:
     QGraphicsRectItem* gameField;
 
     void updateAgentPositions();
-    void updateAgentItemPositions(QGraphicsItem* item, const std::unique_ptr<Agent>& agent, int x, int y);
+    void updateAgentItemPositions(QGraphicsItem* item, const std::shared_ptr<Agent>& agent, int x, int y);
     void checkTagging();
     QGraphicsItem* getAgentItem(Agent* agent);
-    void updateAgentItem(QGraphicsItem* item, const std::vector<std::unique_ptr<Agent>>& agents, QColor color);
+    void updateAgentItem(QGraphicsItem* item, const std::vector<std::shared_ptr<Agent>>& agents, QColor color);
     void updateSceneItems();
     void resetEnemyFlag(const QString& team);
     void updateScoreDisplay();
