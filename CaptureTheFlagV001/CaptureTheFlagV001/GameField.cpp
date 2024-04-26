@@ -9,6 +9,7 @@
 #include <memory>
 #include "GameManager.h"
 
+
 GameField::GameField(QWidget* parent, int width, int height)
     : QGraphicsView(parent), gameFieldWidth(0), gameFieldHeight(0) {
     setRenderHint(QPainter::Antialiasing);
@@ -19,11 +20,10 @@ GameField::GameField(QWidget* parent, int width, int height)
     gameFieldWidth = 800;
     gameFieldHeight = 600;
 
-    // Initialize the GameManager
-    gameManager = new GameManager(gameFieldWidth, gameFieldHeight);
+    gameManager = std::make_shared<GameManager>(gameFieldWidth, gameFieldHeight);
 
-    // Create the Pathfinder object
-    pathfinder = new Pathfinder(gameFieldWidth, gameFieldHeight);
+    // Set up the pathfinder
+    pathfinder = std::make_shared<Pathfinder>(gameFieldWidth, gameFieldHeight);
 
     // Set up the agents before setting up the scene
     setupAgents(4, 4, gameFieldWidth, gameFieldHeight, gameManager);
@@ -65,7 +65,7 @@ GameField::GameField(QWidget* parent, int width, int height)
 
     gameTimer = new QTimer(this);
     connect(gameTimer, &QTimer::timeout, this, &GameField::handleGameTimerTimeout);
-    gameTimer->start(100);
+    gameTimer->start(1000);
 }
 
 void GameField::clearAgents() {
@@ -74,7 +74,7 @@ void GameField::clearAgents() {
     redAgents.clear();
 }
 
-void GameField::setupAgents(int blueCount, int redCount, int gameFieldWidth, int gameFieldHeight, GameManager* gameManager) {
+void GameField::setupAgents(int blueCount, int redCount, int gameFieldWidth, int gameFieldHeight, const std::shared_ptr<GameManager>& gameManager) {
     // Initialize blue agents
     for (int i = 0; i < blueCount; i++) {
         int x, y;
@@ -84,19 +84,25 @@ void GameField::setupAgents(int blueCount, int redCount, int gameFieldWidth, int
             x = QRandomGenerator::global()->bounded(0, gameFieldWidth / 2);
             y = QRandomGenerator::global()->bounded(0, gameFieldHeight);
 
-            // Check if the position is valid (not occupied by other agents)
-            validPosition = true; // Assuming all positions are valid for now
+            // Check if the position is within the game field boundaries
+            if (x >= 0 && x < gameFieldWidth / 2 && y >= 0 && y < gameFieldHeight) {
+                validPosition = true;
+            }
         }
 
         // Construct the blue agent and add to the list
         auto blueBrain = std::make_shared<Brain>();
         auto blueMemory = std::make_shared<Memory>();
         auto agent = std::make_shared<Agent>(x, y, "blue", gameFieldWidth, gameFieldHeight, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
+        agent->setCarryingFlag(false);
+        agent->setIsTagged(false);
         blueAgents.push_back(agent);
 
         // Connect signals
-        connect(agent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-        connect(agent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
+        connect(agent.get(), &Agent::redFlagCaptured, this, [this, gameManager]() {
+            handleFlagCapture("red", gameManager);
+            });
+
     }
 
     // Initialize red agents
@@ -108,19 +114,23 @@ void GameField::setupAgents(int blueCount, int redCount, int gameFieldWidth, int
             x = QRandomGenerator::global()->bounded(gameFieldWidth / 2, gameFieldWidth);
             y = QRandomGenerator::global()->bounded(0, gameFieldHeight);
 
-            // Check if the position is valid (not occupied by other agents)
-            validPosition = true; // Assuming all positions are valid for now
+            if (x >= gameFieldWidth / 2 && x < gameFieldWidth && y >= 0 && y < gameFieldHeight) {
+                validPosition = true;
+            }
         }
 
         // Construct the red agent and add to the list
         auto redBrain = std::make_shared<Brain>();
         auto redMemory = std::make_shared<Memory>();
         auto agent = std::make_shared<Agent>(x, y, "red", gameFieldWidth, gameFieldHeight, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
+        agent->setCarryingFlag(false);
+        agent->setIsTagged(false);
         redAgents.push_back(agent);
 
         // Connect signals
-        connect(agent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-        connect(agent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
+        connect(agent.get(), &Agent::blueFlagReset, this, [this, gameManager]() {
+            resetEnemyFlag("blue", gameManager);
+            });
     }
 }
 
@@ -128,7 +138,7 @@ void GameField::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
 }
 
-void GameField::runTestCase2(int agentCount, GameManager* gameManager) {
+void GameField::runTestCase2(int agentCount, const std::shared_ptr<GameManager>& gameManager) {
     clearAgents();
     int blueCount = agentCount / 2;
     int redCount = agentCount - blueCount;
@@ -229,16 +239,15 @@ void GameField::runTestCase3() {
             redFlag->setPolygon(redTriangle);
         }
 
-
         // Update the agent item positions
         for (const auto& agent : blueAgents) {
             QGraphicsItem* item = getAgentItem(agent.get());
-            updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
+            updateAgentItemPositions(item, agent);
         }
 
         for (const auto& agent : redAgents) {
             QGraphicsItem* item = getAgentItem(agent.get());
-            updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
+            updateAgentItemPositions(item, agent);
         }
     }
     else {
@@ -246,54 +255,113 @@ void GameField::runTestCase3() {
     }
 }
 
-void GameField::handleFlagCapture(const QString& side) {
+void GameField::handleFlagCapture(const QString& side, const std::shared_ptr<GameManager>& gameManager) {
     if (side == "blue") {
         blueScore++;
-        resetEnemyFlag("red");
+        resetEnemyFlag("red", gameManager);
     }
     else if (side == "red") {
         redScore++;
-        resetEnemyFlag("blue");
+        resetEnemyFlag("blue", gameManager);
     }
 
     updateScoreDisplay();
 }
 
-void GameField::updateAgents() {
-    std::vector<Agent*> blueAgentPointers;
+void GameField::updateAgents(int elapsedTime) {
+    // Log the start of the update process
+    qDebug() << "Updating agents...";
+
+    // Update and render blue agents
     for (const auto& agent : blueAgents) {
-        blueAgentPointers.push_back(agent.get());
+        std::vector<std::pair<int, int>> blueAgentPositions = getAgentPositions(blueAgents);
+        std::vector<Agent*> blueAgentPointers;
+        for (const auto& blueAgent : blueAgents) {
+            blueAgentPointers.push_back(blueAgent.get());
+        }
+
+        // Log the agent's initial state
+        qDebug() << "Updating red agent at (" << agent->getX() << ", " << agent->getY() << "), carrying flag:" << agent->isCarryingFlag() << ", tagged:" << agent->isTagged();
+
+        agent->update(blueAgentPositions, blueAgentPointers, blueAgents, redAgents, elapsedTime);
+
+        QGraphicsItem* item = getAgentItem(agent.get());
+        updateAgentItemPositions(item, agent);
+
+        // Log the agent's updated state
+        qDebug() << "Updated red agent at (" << agent->getX() << ", " << agent->getY() << "), carrying flag:" << agent->isCarryingFlag() << ", tagged:" << agent->isTagged();
+
+        // Render the updated agent
+        viewport()->update();
     }
 
-    std::vector<Agent*> redAgentPointers;
+    // Update and render red agents
     for (const auto& agent : redAgents) {
-        redAgentPointers.push_back(agent.get());
+        std::vector<std::pair<int, int>> redAgentPositions = getAgentPositions(redAgents);
+        std::vector<Agent*> redAgentPointers;
+        for (const auto& redAgent : redAgents) {
+            redAgentPointers.push_back(redAgent.get());
+        }
+
+        // Log the agent's initial state
+        qDebug() << "Updating blue agent at (" << agent->getX() << ", " << agent->getY() << "), carrying flag:" << agent->isCarryingFlag() << ", tagged:" << agent->isTagged();
+
+        agent->update(redAgentPositions, redAgentPointers, blueAgents, redAgents, elapsedTime);
+
+        QGraphicsItem* item = getAgentItem(agent.get());
+        updateAgentItemPositions(item, agent);
+
+        // Log the agent's updated state
+        qDebug() << "Updated blue agent at (" << agent->getX() << ", " << agent->getY() << "), carrying flag:" << agent->isCarryingFlag() << ", tagged:" << agent->isTagged();
+
+        // Render the updated agent
+        viewport()->update();
     }
 
-    // Update blue agents
-    for (const auto& agent : blueAgents) {
-        agent->update(getAgentPositions(redAgents), redAgentPointers, blueAgents, redAgents);
-    }
-
-    // Update red agents
-    for (const auto& agent : redAgents) {
-        agent->update(getAgentPositions(blueAgents), blueAgentPointers, blueAgents, redAgents);
-    }
-
-    updateAgentPositions();
+    // Check for tagging after updating all agents
     checkTagging();
 
-    for (const auto& agent : blueAgents) {
-        QGraphicsItem* item = getAgentItem(agent.get());
-        updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
-    }
+    // Log the end of the update process
+    qDebug() << "Agents updated.";
+}
 
-    for (const auto& agent : redAgents) {
-        QGraphicsItem* item = getAgentItem(agent.get());
-        updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
-    }
+void GameField::updateAgentItemPositions(QGraphicsItem* item, const std::shared_ptr<Agent>& agent) {
+    if (item) {
+        int oldX = item->pos().x();
+        int oldY = item->pos().y();
+        bool oldCarryingFlag = agent->isCarryingFlag();
+        bool oldTagged = agent->isTagged();
 
-    this->viewport()->update();
+        item->setPos(agent->getX(), agent->getY());
+
+        QGraphicsEllipseItem* agentItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item);
+        if (agentItem) {
+            // Update the agent item's appearance based on its state
+            if (agent->isTagged()) {
+                QPen pen(Qt::yellow, 3);
+                agentItem->setPen(pen);
+            }
+            else {
+                QPen pen(Qt::black, 1);
+                agentItem->setPen(pen);
+            }
+
+            if (agent->isCarryingFlag()) {
+                agentItem->setBrush(agent->getSide() == "blue" ? Qt::cyan : Qt::magenta);
+            }
+            else {
+                agentItem->setBrush(agent->getSide() == "blue" ? Qt::blue : Qt::red);
+            }
+
+            // Check for unexpected changes
+            if (agent->getX() != oldX || agent->getY() != oldY) {
+                qDebug() << "Agent position changed unexpectedly from (" << oldX << ", " << oldY << ") to (" << agent->getX() << ", " << agent->getY() << ")";
+            }
+        }
+    }
+    else {
+        qDebug() << "Agent item not found in the scene for agent at position (" << agent->getX() << ", " << agent->getY() << ")";
+    }
 }
 
 std::vector<std::pair<int, int>> GameField::getAgentPositions(const std::vector<std::shared_ptr<Agent>>& agents) const {
@@ -305,23 +373,20 @@ std::vector<std::pair<int, int>> GameField::getAgentPositions(const std::vector<
 }
 
 void GameField::handleGameTimerTimeout() {
-    timeRemaining--;
+    // Calculate the elapsed time since the last frame
+    int elapsedTime = gameTimer->interval();
+
+    // Update the agents based on the elapsed time
+    updateAgents(elapsedTime);
+
+    // Update the remaining time and display
+    timeRemaining -= elapsedTime / 1000;
     updateTimeDisplay();
 
+    // Check if the game has ended
     if (timeRemaining <= 0) {
         stopGame();
         declareWinner();
-    }
-    else {
-        // Update agents every N iterations to reduce excessive updating
-        const int updateFrequency = 5; // Adjust this value based on your game's requirements
-        static int updateCounter = 0;
-
-        if (updateCounter % updateFrequency == 0) {
-            updateAgents();
-        }
-
-        updateCounter++;
     }
 }
 
@@ -361,64 +426,6 @@ void GameField::declareWinner() {
     scene->addItem(winnerText);
 }
 
-void GameField::updateAgentPositions() {
-    std::vector<std::pair<int, int>> bluePositions;
-    std::vector<std::pair<int, int>> redPositions;
-
-    for (const auto& agent : blueAgents) {
-        QGraphicsItem* item = getAgentItem(agent.get());
-        updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
-        bluePositions.emplace_back(agent->getX(), agent->getY());
-    }
-
-    for (const auto& agent : redAgents) {
-        QGraphicsItem* item = getAgentItem(agent.get());
-        updateAgentItemPositions(item, agent, agent->getX(), agent->getY());
-        redPositions.emplace_back(agent->getX(), agent->getY());
-    }
-
-    // Print blue agent positions for debugging
-    qDebug() << "Blue agent positions:";
-    for (const auto& pos : bluePositions) {
-        qDebug() << "(" << pos.first << ", " << pos.second << ")";
-    }
-
-    // Print red agent positions for debugging
-    qDebug() << "Red agent positions:";
-    for (const auto& pos : redPositions) {
-        qDebug() << "(" << pos.first << ", " << pos.second << ")";
-    }
-}
-
-void GameField::updateAgentItemPositions(QGraphicsItem* item, const std::shared_ptr<Agent>& agent, int x, int y) {
-    if (item) {
-        qDebug() << "Agent at (" << x << ", " << y << ") - Item found with updateAgentItemPositions";
-        item->setPos(x, y);
-
-        QGraphicsEllipseItem* agentItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item);
-        if (agentItem) {
-            // Update the agent item's appearance based on its state
-            if (agent->isTagged()) {
-                QPen pen(Qt::yellow, 3);
-                agentItem->setPen(pen);
-            }
-            else {
-                QPen pen(Qt::black, 1);
-                agentItem->setPen(pen);
-            }
-
-            if (agent->isCarryingFlag()) {
-                agentItem->setBrush(agent->getSide() == "blue" ? Qt::cyan : Qt::magenta);
-            }
-            else {
-                agentItem->setBrush(agent->getSide() == "blue" ? Qt::blue : Qt::red);
-            }
-        }
-    }
-    else {
-        qDebug() << "Agent item not found in the scene for agent at position (" << x << ", " << y << ") with updateAgentItemPositions";
-    }
-}
 
 void GameField::checkTagging() {
     for (const auto& agent : blueAgents) {
@@ -480,7 +487,7 @@ void GameField::updateAgentItem(QGraphicsItem* item, const std::vector<std::shar
     }
 }
 
-void GameField::resetEnemyFlag(const QString& team) {
+void GameField::resetEnemyFlag(const QString& team, const std::shared_ptr<GameManager>& gameManager) {
     if (team == "red") {
         // Reset the red flag position
         QGraphicsPolygonItem* redFlag = findFlagItem("red");
@@ -627,17 +634,8 @@ void GameField::setupScene() {
 }
 
 GameField::~GameField() {
-    if (pathfinder) {
-        delete pathfinder;
-    }
-    pathfinder = nullptr;
-
     // Assuming agents are now managed via shared_ptr, no need to delete them
     blueAgents.clear();
     redAgents.clear();
 
-    if (gameManager) {
-        delete gameManager;
-    }
-    gameManager = nullptr;
 }

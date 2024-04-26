@@ -5,8 +5,9 @@
 #include <QGraphicsScene>
 #include <QGraphicsItem>
 #include <QTimer>
-
+#include <QPointer>
 #include "Agent.h"
+#include "GameManager.h"
 #include "Pathfinder.h"
 
 class GameField : public QGraphicsView {
@@ -17,24 +18,23 @@ public:
     ~GameField();
 
     // Getter functions
-    const std::vector<std::shared_ptr<Agent>>& getBlueAgents() const;
-    const std::vector<std::shared_ptr<Agent>>& getRedAgents() const;
-    GameManager* getGameManager() const { return gameManager; }
-    Pathfinder* getPathfinder() const { return pathfinder; }
+    std::shared_ptr<GameManager> getGameManager() const { return gameManager; }
+    std::shared_ptr<Pathfinder> getPathfinder() const { return pathfinder; }
     int getTaggingDistance() const { return taggingDistance; }
     QGraphicsScene* getScene() const { return scene; }
 
     void clearAgents();
-    void setupAgents(int blueCount, int redCount, int cols, int rows, GameManager* gameManager);
+    void setupAgents(int blueCount, int redCount, int cols, int rows, const std::shared_ptr<GameManager>& gameManager);
     void runTestCase1();
-    void runTestCase2(int agentCount, GameManager* gameManager);
+    void runTestCase2(int agentCount, const std::shared_ptr<GameManager>& gameManager);
     void runTestCase3();
+    void handleFlagCapture(const QString& side, const std::shared_ptr<GameManager>& gameManager);
+    void updateAgents(int elapsedTime);
 
 private slots:
-    void updateAgents();
+    void updateAgentItemPositions(QGraphicsItem* item, const std::shared_ptr<Agent>& agent);
     std::vector<std::pair<int, int>> getAgentPositions(const std::vector<std::shared_ptr<Agent>>& agents) const;
     void handleGameTimerTimeout();
-    void handleFlagCapture(const QString& team);
 
 private:
     void setupScene();
@@ -45,31 +45,27 @@ private:
     std::vector<std::shared_ptr<Agent>> redAgents;
     int gameFieldWidth;
     int gameFieldHeight;
-    Pathfinder* pathfinder;
-    int cellSize;
+    std::shared_ptr<GameManager> gameManager;
+    std::shared_ptr<Pathfinder> pathfinder;
     int blueScore;
     int redScore;
     int timeRemaining;
     QTimer* gameTimer;
     float taggingDistance;
     QGraphicsTextItem* timeRemainingTextItem;
-    QGraphicsTextItem* blueScoreTextItem;
-    QGraphicsTextItem* redScoreTextItem;
-    GameManager* gameManager;
+    QPointer<QGraphicsTextItem> blueScoreTextItem;
+    QPointer<QGraphicsTextItem> redScoreTextItem;
     QGraphicsRectItem* gameField;
 
-    void updateAgentPositions();
-    void updateAgentItemPositions(QGraphicsItem* item, const std::shared_ptr<Agent>& agent, int x, int y);
     void checkTagging();
     QGraphicsItem* getAgentItem(Agent* agent);
     void updateAgentItem(QGraphicsItem* item, const std::vector<std::shared_ptr<Agent>>& agents, QColor color);
+    void resetEnemyFlag(const QString& team, const std::shared_ptr<GameManager>& gameManager);
     void updateSceneItems();
-    void resetEnemyFlag(const QString& team);
     void updateScoreDisplay();
     void updateTimeDisplay();
     void stopGame();
     void declareWinner();
-
 };
 
 #endif

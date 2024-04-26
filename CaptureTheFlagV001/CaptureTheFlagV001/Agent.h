@@ -16,10 +16,10 @@ class Agent : public QObject {
 private:
     int x, y;
     int gameFieldWidth, gameFieldHeight;
-    Pathfinder* pathfinder;
+    std::shared_ptr<Pathfinder> pathfinder;
     std::shared_ptr<Brain> brain;
     std::shared_ptr<Memory> memory;
-    GameManager* gameManager;
+    std::shared_ptr<GameManager> gameManager;
     bool _isCarryingFlag;
     bool _isTagged;
     int cooldownTimer;
@@ -33,12 +33,13 @@ private:
     std::string side;
 
 public:
-    Agent(int x, int y, std::string side, int gameFieldWidth, int gameFieldHeight, Pathfinder* pathfinder, float taggingDistance,
-        const std::shared_ptr<Brain>& brain, const std::shared_ptr<Memory>& memory, GameManager* gameManager,
-        std::vector<std::shared_ptr<Agent>>& blueAgents, std::vector<std::shared_ptr<Agent>>& redAgents);
+    Agent(int x, int y, std::string side, int gameFieldWidth, int gameFieldHeight,
+          const std::shared_ptr<Pathfinder>& pathfinder, float taggingDistance,
+          const std::shared_ptr<Brain>& brain, const std::shared_ptr<Memory>& memory,
+          const std::shared_ptr<GameManager>& gameManager,
+          std::vector<std::shared_ptr<Agent>>& blueAgents, std::vector<std::shared_ptr<Agent>>& redAgents);
 
-    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents,
-        const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents);
+    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents, int elapsedTime);
     void updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void handleFlagInteractions(const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents);
     void handleCooldownTimer();
