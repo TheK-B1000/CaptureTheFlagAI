@@ -9,16 +9,17 @@
 #include <QGraphicsView>
 #include <memory>
 
-Agent::Agent(int x, int y, std::string side, int gameFieldWidth, int gameFieldHeight, Pathfinder* pathfinder, float taggingDistance,
-    const std::shared_ptr<Brain>& brain, const std::shared_ptr<Memory>& memory, GameManager* gameManager,
+Agent::Agent(int x, int y, std::string side, int gameFieldWidth, int gameFieldHeight, const std::shared_ptr<Pathfinder>& pathfinder, float taggingDistance, const std::shared_ptr<Brain>& brain, const std::shared_ptr<Memory>& memory, const std::shared_ptr<GameManager>& gameManager,
     std::vector<std::shared_ptr<Agent>>& blueAgents, std::vector<std::shared_ptr<Agent>>& redAgents)
-    : x(x), y(y), side(side), gameFieldWidth(gameFieldWidth), gameFieldHeight(gameFieldHeight), pathfinder(pathfinder), taggingDistance(taggingDistance),
-    brain(brain), memory(memory), gameManager(gameManager), _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true),
-    previousX(x), previousY(y), stuckTimer(0) {}
+    : x(x), y(y), side(side), gameFieldWidth(gameFieldWidth), gameFieldHeight(gameFieldHeight), pathfinder(pathfinder), taggingDistance(taggingDistance), brain(brain), memory(memory), gameManager(gameManager),
+    _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true), previousX(x), previousY(y), stuckTimer(0) {}
 
-void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents) {
+void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents, int elapsedTime) {
     // Updates memory of agent with position of other agents
     updateMemory(otherAgentsPositions);
+
+    float movementSpeed = 100.0f; // Adjust the speed as needed
+    float movementDistance = movementSpeed * elapsedTime / 1000.0f;
 
     // is ai agent activated
     if (!_isEnabled) {
@@ -54,7 +55,7 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         break;
     case BrainDecision::GrabFlag:
         qDebug() << "Moving towards enemy flag";
-       moveTowardsEnemyFlag();
+        //moveTowardsEnemyFlag();
         break;
     case BrainDecision::CaptureFlag:
         qDebug() << "Moving towards home zone";
@@ -76,20 +77,6 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         qDebug() << "Exploring field";
         exploreField();
         break;
-    }
-
-    // Validate the new position before updating
-    if (isValidPosition(x, y)) {
-        // Update the previous position
-        previousX = x;
-        previousY = y;
-    }
-    else {
-        // The new position is outside the game field boundaries
-        // Adjust the position to the nearest valid position or prevent the movement
-        // Example: Clamp the position to the nearest valid position
-        x = std::max(0, std::min(x, gameFieldWidth - 1));
-        y = std::max(0, std::min(y, gameFieldHeight - 1));
     }
 
     handleFlagInteractions(blueAgents, redAgents);

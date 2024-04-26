@@ -1,11 +1,10 @@
 #include "GameManager.h"
 
-GameManager::GameManager(int cols, int rows)
-    : cols(cols), rows(rows),
-    blueFlagPosition(35, 3), // Set the correct initial position for the blue flag
+GameManager::GameManager(int gameFieldWidth, int gameFieldHeight)
+    : blueFlagPosition(35, 3), // Set the correct initial position for the blue flag
     redFlagPosition(35, 14), // Set the correct initial position for the red flag
-    blueTeamZonePosition(0, rows / 2),
-    redTeamZonePosition(cols - 1, rows / 2) {}
+    blueTeamZonePosition(0, gameFieldHeight / 2),
+    redTeamZonePosition(gameFieldWidth - 1, gameFieldHeight / 2) {}
 
 std::pair<int, int> GameManager::getFlagPosition(const std::string& side) const {
     if (side == "blue") {
@@ -43,8 +42,8 @@ std::pair<int, int> GameManager::getTeamZonePosition(const std::string& side) co
     int teamZoneCenterY = flagPosition.second;
 
     // Ensure the team zone center position is within the grid boundaries
-    teamZoneCenterX = std::max(teamZoneRadius, std::min(teamZoneCenterX, cols - teamZoneRadius - 1));
-    teamZoneCenterY = std::max(teamZoneRadius, std::min(teamZoneCenterY, rows - teamZoneRadius - 1));
+    teamZoneCenterX = std::max(teamZoneRadius, std::min(teamZoneCenterX, gameFieldWidth - teamZoneRadius - 1));
+    teamZoneCenterY = std::max(teamZoneRadius, std::min(teamZoneCenterY, gameFieldHeight - teamZoneRadius - 1));
 
     return std::make_pair(teamZoneCenterX, teamZoneCenterY);
 }
@@ -81,8 +80,8 @@ bool GameManager::isTeamZone(int x, int y) const {
 
 void GameManager::resetGame() {
     // Reset flag positions to their initial values
-    blueFlagPosition = std::make_pair(0, rows / 2);
-    redFlagPosition = std::make_pair(cols - 1, rows / 2);
+    blueFlagPosition = std::make_pair(0, gameFieldHeight / 2);
+    redFlagPosition = std::make_pair(gameFieldWidth - 1, gameFieldHeight / 2);
 
     // Reset game state variables
     currentTime = maxTime;

@@ -21,7 +21,7 @@ private slots:
 private:
     QMenu* testCaseMenu;
     GameField* gameField;
-    GameManager* gameManager;  
+    std::shared_ptr<GameManager> gameManager;
 };
 
 #endif

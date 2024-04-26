@@ -6,7 +6,7 @@
 
 class GameManager {
 public:
-    GameManager(int cols, int rows);
+    GameManager(int gameFieldWidth, int gameFieldHeight);
 
     std::pair<int, int> getFlagPosition(const std::string& side) const;
     void setFlagPosition(const std::string& side, int x, int y);
@@ -19,8 +19,7 @@ public:
     void resetGame();
 
 private:
-    int cols;
-    int rows;
+    int gameFieldWidth, gameFieldHeight;
     std::pair<int, int> blueFlagPosition;
     std::pair<int, int> redFlagPosition;
     std::pair<int, int> blueTeamZonePosition;

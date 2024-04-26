@@ -51,7 +51,6 @@ std::vector<std::pair<int, int>> Pathfinder::findPath(int startX, int startY, in
             }
             std::reverse(path.begin(), path.end());
 
-            qDebug() << "Pathfinder: Generated path:";
             for (const auto& point : path) {
                 qDebug() << point.first << point.second;
             }
