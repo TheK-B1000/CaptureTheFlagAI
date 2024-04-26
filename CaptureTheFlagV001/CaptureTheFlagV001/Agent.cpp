@@ -54,7 +54,7 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         break;
     case BrainDecision::GrabFlag:
         qDebug() << "Moving towards enemy flag";
-        moveTowardsEnemyFlag();
+       moveTowardsEnemyFlag();
         break;
     case BrainDecision::CaptureFlag:
         qDebug() << "Moving towards home zone";
