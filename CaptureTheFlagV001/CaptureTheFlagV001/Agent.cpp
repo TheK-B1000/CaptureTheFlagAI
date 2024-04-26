@@ -7,14 +7,16 @@
 #include <iostream>
 #include <QDebug>
 #include <QGraphicsView>
+#include <memory>
 
 Agent::Agent(int x, int y, std::string side, int cols, int rows, std::vector<std::vector<int>>& grid, Pathfinder* pathfinder, float taggingDistance,
-    Brain* brain, Memory* memory, GameManager* gameManager, std::vector<std::unique_ptr<Agent>>& blueAgents, std::vector<std::unique_ptr<Agent>>& redAgents)
+    const std::shared_ptr<Brain>& brain, const std::shared_ptr<Memory>& memory, GameManager* gameManager,
+    std::vector<std::shared_ptr<Agent>>& blueAgents, std::vector<std::shared_ptr<Agent>>& redAgents)
     : x(x), y(y), side(side), cols(cols), rows(rows), grid(grid), pathfinder(pathfinder), taggingDistance(taggingDistance),
     brain(brain), memory(memory), gameManager(gameManager), _isCarryingFlag(false), _isTagged(false), cooldownTimer(0), _isEnabled(true),
     previousX(x), previousY(y), stuckTimer(0) {}
 
-void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents) {
+void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents) {
     // Updates memory of agent with position of other agents
     updateMemory(otherAgentsPositions);
 
@@ -111,7 +113,7 @@ void Agent::updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPosi
     }
 }
 
-void Agent::handleFlagInteractions(const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents) {
+void Agent::handleFlagInteractions(const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents) {
     // checks if not carrying flag, not tagged, and is within a 10 unit distance or in opponent team zone
     if (!_isCarryingFlag && !_isTagged && distanceToEnemyFlag() <= 10) {
         // checks to make sure no team ai agent is already holding a flag
@@ -131,7 +133,7 @@ void Agent::handleFlagInteractions(const std::vector<std::unique_ptr<Agent>>& bl
     }
 }
 
-bool Agent::isTeamCarryingFlag(const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents) {
+bool Agent::isTeamCarryingFlag(const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents) {
     for (const auto& teammate : (getSide() == "blue" ? blueAgents : redAgents)) {
         if (teammate.get() != this && teammate->isCarryingFlag()) {
             return true;

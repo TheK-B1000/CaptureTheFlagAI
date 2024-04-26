@@ -103,69 +103,55 @@ void GameField::setupAgents(int blueCount, int redCount, int cols, GameManager* 
     for (int i = 0; i < blueCount; i++) {
         int x, y;
         bool validPosition = false;
+
         while (!validPosition) {
-            x = QRandomGenerator::global()->bounded(1, cols / 2 - 1);
-            y = QRandomGenerator::global()->bounded(1, rows - 2);
-            if (x > 0 && x < cols - 1 && y > 0 && y < rows - 1 && grid[y][x] != 1) {
+            x = 20 + QRandomGenerator::global()->bounded(0, 4) * 50;
+            y = 100 + QRandomGenerator::global()->bounded(0, 4) * 50;
+
+            if (x > 0 && x < cols / 2 - 1 && y > 0 && y < rows - 1 && grid[y][x - 20] != 1) {
                 validPosition = true;
             }
         }
 
-        std::unique_ptr<Brain> blueBrain = std::make_unique<Brain>();
-        if (!blueBrain) {
-            qDebug() << "Failed to allocate memory for Brain object";
-            return;
-        }
+        std::shared_ptr<Brain> blueBrain = std::make_shared<Brain>();
+        std::shared_ptr<Memory> blueMemory = std::make_shared<Memory>();
+        std::shared_ptr<Agent> agent = std::make_shared<Agent>((x - 20) / cellSize, (y - 100) / cellSize, "blue", cols, rows, grid, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
 
-        std::unique_ptr<Memory> blueMemory = std::make_unique<Memory>();
-        if (!blueMemory) {
-            qDebug() << "Failed to allocate memory for Memory object";
-            return;
-        }
-        std::unique_ptr<Agent> blueAgent = std::make_unique<Agent>(x, y, "blue", cols, rows, grid, pathfinder, taggingDistance, blueBrain.get(), blueMemory.get(), gameManager, blueAgents, redAgents);
-        blueAgents.emplace_back(std::move(blueAgent));
+        blueAgents.push_back(agent); // Use the shared_ptr directly
 
-        grid[y][x] = 1;
+        grid[(y - 100) / cellSize][x - 20] = 1;
 
-        // Connect signals and slots
-        connect(blueAgents[i].get(), &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
-        connect(blueAgents[i].get(), &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
+        connect(agent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+        connect(agent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 
     // Initialize red agents
     for (int i = 0; i < redCount; i++) {
         int x, y;
         bool validPosition = false;
+
         while (!validPosition) {
-            x = QRandomGenerator::global()->bounded(cols / 2, cols - 2);
-            y = QRandomGenerator::global()->bounded(1, rows - 2);
-            if (x > 0 && x < cols - 1 && y > 0 && y < rows - 1 && grid[y][x] != 1) {
+            x = 600 + QRandomGenerator::global()->bounded(0, 4) * 50;
+            y = 100 + QRandomGenerator::global()->bounded(0, 4) * 50;
+
+            if (x > 0 && x < cols - 1 && y > 0 && y < rows - 1 && grid[y][x - 600] != 1) {
                 validPosition = true;
             }
         }
 
-        std::unique_ptr<Brain> redBrain = std::make_unique<Brain>();
-        if (!redBrain) {
-            qDebug() << "Failed to allocate memory for Brain object";
-            return;
-        }
+        std::shared_ptr<Brain> redBrain = std::make_shared<Brain>();
+        std::shared_ptr<Memory> redMemory = std::make_shared<Memory>();
+        std::shared_ptr<Agent> agent = std::make_shared<Agent>((x - 600) / cellSize, (y - 100) / cellSize, "red", cols, rows, grid, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
 
-        std::unique_ptr<Memory> redMemory = std::make_unique<Memory>();
-        if (!redMemory) {
-            qDebug() << "Failed to allocate memory for Memory object";
-            return;
-        }
+        redAgents.push_back(agent); // Use the shared_ptr directly
 
-        std::unique_ptr<Agent> redAgent = std::make_unique<Agent>(x, y, "red", cols, rows, grid, pathfinder, taggingDistance, redBrain.get(), redMemory.get(), gameManager, blueAgents, redAgents);
-        redAgents.emplace_back(std::move(redAgent));
+        grid[(y - 100) / cellSize][x - 600] = 1;
 
-        grid[y][x] = 1;
-
-        // Connect signals and slots
-        connect(redAgents[i].get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-        connect(redAgents[i].get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
+        connect(agent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
+        connect(agent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
     }
 }
+
 
 void GameField::runTestCase1() {
     // Test case 1: Default game setup (4 blue agents, 4 red agents)
@@ -362,7 +348,7 @@ void GameField::updateAgents() {
     this->viewport()->update();
 }
 
-std::vector<std::pair<int, int>> GameField::getAgentPositions(const std::vector<std::unique_ptr<Agent>>& agents) const {
+std::vector<std::pair<int, int>> GameField::getAgentPositions(const std::vector<std::shared_ptr<Agent>>& agents) const {
     std::vector<std::pair<int, int>> positions;
     for (const auto& agent : agents) {
         positions.emplace_back(agent->getX(), agent->getY());
@@ -463,7 +449,7 @@ void GameField::updateAgentPositions() {
     }
 }
 
-void GameField::updateAgentItemPositions(QGraphicsItem* item, const std::unique_ptr<Agent>& agent, int x, int y) {
+void GameField::updateAgentItemPositions(QGraphicsItem* item, const std::shared_ptr<Agent>& agent, int x, int y) {
     if (item) {
         qDebug() << "Agent at (" << x << ", " << y << ") - Item found with updateAgentItemPositions";
         item->setPos(x * cellSize, y * cellSize);
@@ -541,7 +527,7 @@ void GameField::updateSceneItems() {
     }
 }
 
-void GameField::updateAgentItem(QGraphicsItem* item, const std::vector<std::unique_ptr<Agent>>& agents, QColor color) {
+void GameField::updateAgentItem(QGraphicsItem* item, const std::vector<std::shared_ptr<Agent>>& agents, QColor color) {
     if (QGraphicsEllipseItem* agentItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item)) {
         for (const auto& agent : agents) {
             if (agentItem->brush().color() == color) {
@@ -822,7 +808,7 @@ GameField::~GameField() {
     }
     pathfinder = nullptr;
 
-    // Assuming agents are now managed via unique_ptr, no need to delete them
+    // Assuming agents are now managed via shared_ptr, no need to delete them
     blueAgents.clear();
     redAgents.clear();
 

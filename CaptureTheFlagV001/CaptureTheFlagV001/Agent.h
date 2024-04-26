@@ -21,8 +21,8 @@ private:
     int cols, rows;
     std::vector<std::vector<int>>& grid;
     Pathfinder* pathfinder;
-    Brain* brain;
-    Memory* memory;
+    std::shared_ptr<Brain> brain;
+    std::shared_ptr<Memory> memory;
     GameManager* gameManager;
     bool _isCarryingFlag;
     bool _isTagged;
@@ -38,10 +38,11 @@ private:
 
 public:
     Agent(int x, int y, std::string side, int cols, int rows, std::vector<std::vector<int>>& grid, Pathfinder* pathfinder, float taggingDistance,
-        Brain* brain, Memory* memory, GameManager* gameManager, std::vector<std::unique_ptr<Agent>>& blueAgents, std::vector<std::unique_ptr<Agent>>& redAgents);
-    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents);
+        const std::shared_ptr<Brain>& brain, const std::shared_ptr<Memory>& memory, GameManager* gameManager,
+        std::vector<std::shared_ptr<Agent>>& blueAgents, std::vector<std::shared_ptr<Agent>>& redAgents);
+    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents);
     void updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions);
-    void handleFlagInteractions(const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents);
+    void handleFlagInteractions(const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents);
     void handleCooldownTimer();
     bool isOpponentCarryingFlag() const;
     std::pair<int, int> getEnemyFlagPosition() const;
@@ -71,9 +72,9 @@ public:
     void setY(int newY);
     void setEnabled(bool enabled);
     void decrementCooldownTimer();
-    Brain* getBrain() const { return brain; }
-    Memory* getMemory() const { return memory; }
-    bool isTeamCarryingFlag(const std::vector<std::unique_ptr<Agent>>& blueAgents, const std::vector<std::unique_ptr<Agent>>& redAgents);
+    const std::shared_ptr<Brain>& getBrain() const { return brain; }
+    const std::shared_ptr<Memory>& getMemory() const { return memory; }
+    bool isTeamCarryingFlag(const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents);
     std::string getSide() const { return side; }
     float getTaggingDistance() const { return taggingDistance; }
     int getCooldownTimer() const { return cooldownTimer; }
