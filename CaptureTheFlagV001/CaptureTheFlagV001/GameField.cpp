@@ -26,7 +26,7 @@ GameField::GameField(QWidget* parent, int width, int height)
     pathfinder = new Pathfinder(gameFieldWidth, gameFieldHeight);
 
     // Set up the agents before setting up the scene
-    //setupAgents(4, 4, gameFieldWidth, gameFieldHeight, gameManager);
+    setupAgents(4, 4, gameFieldWidth, gameFieldHeight, gameManager);
 
     // Set up the scene after setting up the agents
     setupScene();
@@ -610,58 +610,19 @@ void GameField::setupScene() {
     gameManager->setTeamZonePosition("blue", blueZoneCenter.x(), blueZoneCenter.y());
     gameManager->setTeamZonePosition("red", redZoneCenter.x(), redZoneCenter.y());
 
-    // Spawn blue agents in a square formation on the top left of the blue side
-    int blueStartX = 50;
-    int blueStartY = 50;
-    int blueSpacing = 30;
-
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 2; j++) {
-            int x = blueStartX + j * blueSpacing;
-            int y = blueStartY + i * blueSpacing;
-
-            std::shared_ptr<Brain> blueBrain = std::make_shared<Brain>();
-            std::shared_ptr<Memory> blueMemory = std::make_shared<Memory>();
-            auto blueAgent = std::make_shared<Agent>(x, y, "blue", gameFieldWidth, gameFieldHeight, pathfinder, taggingDistance, blueBrain, blueMemory, gameManager, blueAgents, redAgents);
-            blueAgents.push_back(blueAgent);
-
-            // Create the visual representation of the blue agent
-            QGraphicsEllipseItem* blueAgentItem = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
-            blueAgentItem->setBrush(Qt::blue);
-            blueAgentItem->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(blueAgent.get())));
-            scene->addItem(blueAgentItem);
-
-            // Connect signals for the blue agent
-            connect(blueAgent.get(), &Agent::blueFlagCaptured, this, [this]() { handleFlagCapture("blue"); });
-            connect(blueAgent.get(), &Agent::redFlagReset, this, [this]() { resetEnemyFlag("red"); });
-        }
+    // Create the visual representation of the agents
+    for (const auto& agent : blueAgents) {
+        QGraphicsEllipseItem* blueAgentItem = new QGraphicsEllipseItem(agent->getX() - 10, agent->getY() - 10, 20, 20);
+        blueAgentItem->setBrush(Qt::blue);
+        blueAgentItem->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent.get())));
+        scene->addItem(blueAgentItem);
     }
 
-    // Spawn red agents in a square formation on the bottom right of the red side
-    int redStartX = 650;
-    int redStartY = 450;
-    int redSpacing = 30;
-
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 2; j++) {
-            int x = redStartX + j * redSpacing;
-            int y = redStartY + i * redSpacing;
-
-            std::shared_ptr<Brain> redBrain = std::make_shared<Brain>();
-            std::shared_ptr<Memory> redMemory = std::make_shared<Memory>();
-            auto redAgent = std::make_shared<Agent>(x, y, "red", gameFieldWidth, gameFieldHeight, pathfinder, taggingDistance, redBrain, redMemory, gameManager, blueAgents, redAgents);
-            redAgents.push_back(redAgent);
-
-            // Create the visual representation of the red agent
-            QGraphicsEllipseItem* redAgentItem = new QGraphicsEllipseItem(x - 10, y - 10, 20, 20);
-            redAgentItem->setBrush(Qt::red);
-            redAgentItem->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(redAgent.get())));
-            scene->addItem(redAgentItem);
-
-            // Connect signals for the red agent
-            connect(redAgent.get(), &Agent::redFlagCaptured, this, [this]() { handleFlagCapture("red"); });
-            connect(redAgent.get(), &Agent::blueFlagReset, this, [this]() { resetEnemyFlag("blue"); });
-        }
+    for (const auto& agent : redAgents) {
+        QGraphicsEllipseItem* redAgentItem = new QGraphicsEllipseItem(agent->getX() - 10, agent->getY() - 10, 20, 20);
+        redAgentItem->setBrush(Qt::red);
+        redAgentItem->setData(0, QVariant::fromValue(reinterpret_cast<quintptr>(agent.get())));
+        scene->addItem(redAgentItem);
     }
 }
 
