@@ -13,24 +13,19 @@ class GameField : public QGraphicsView {
     Q_OBJECT
 
 public:
-    GameField(QWidget* parent, const std::vector<std::vector<int>>& grid);
+    GameField(QWidget* parent, int width, int height);
     ~GameField();
 
     // Getter functions
     const std::vector<std::shared_ptr<Agent>>& getBlueAgents() const;
     const std::vector<std::shared_ptr<Agent>>& getRedAgents() const;
     GameManager* getGameManager() const { return gameManager; }
-    int getCols() const { return cols; }
-    const std::vector<std::vector<int>>& getGrid() const { return grid; }
-    int getRows() const { return rows; }
     Pathfinder* getPathfinder() const { return pathfinder; }
     int getTaggingDistance() const { return taggingDistance; }
     QGraphicsScene* getScene() const { return scene; }
 
     void clearAgents();
     void setupAgents(int blueCount, int redCount, int cols, int rows, GameManager* gameManager);
-    bool isValidPosition(int x, int y);
-
     void runTestCase1();
     void runTestCase2(int agentCount, GameManager* gameManager);
     void runTestCase3();
@@ -44,7 +39,6 @@ private slots:
 private:
     void setupScene();
     QGraphicsPolygonItem* findFlagItem(const QString& team);
-    void updateGridFromZones(QGraphicsEllipseItem* blueZone, QGraphicsEllipseItem* redZone);
 
     QGraphicsScene* scene;
     std::vector<std::shared_ptr<Agent>> blueAgents;
@@ -61,10 +55,6 @@ private:
     QGraphicsTextItem* timeRemainingTextItem;
     QGraphicsTextItem* blueScoreTextItem;
     QGraphicsTextItem* redScoreTextItem;
-    int cols;
-    std::vector<std::vector<int>> grid;
-    std::pair<int, int> pixelToGrid(int pixelX, int pixelY);
-    int rows;
     GameManager* gameManager;
     QGraphicsRectItem* gameField;
 

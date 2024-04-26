@@ -10,16 +10,12 @@
 #include "GameManager.h"
 #include <QObject>
 
-const int FIELD_WIDTH = 20; // Field width in meters
-const int GRID_SIZE = 100; // Grid size for discretization
-
 class Agent : public QObject {
     Q_OBJECT
 
 private:
     int x, y;
-    int cols, rows;
-    std::vector<std::vector<int>>& grid;
+    int gameFieldWidth, gameFieldHeight;
     Pathfinder* pathfinder;
     std::shared_ptr<Brain> brain;
     std::shared_ptr<Memory> memory;
@@ -37,10 +33,12 @@ private:
     std::string side;
 
 public:
-    Agent(int x, int y, std::string side, int cols, int rows, std::vector<std::vector<int>>& grid, Pathfinder* pathfinder, float taggingDistance,
+    Agent(int x, int y, std::string side, int gameFieldWidth, int gameFieldHeight, Pathfinder* pathfinder, float taggingDistance,
         const std::shared_ptr<Brain>& brain, const std::shared_ptr<Memory>& memory, GameManager* gameManager,
         std::vector<std::shared_ptr<Agent>>& blueAgents, std::vector<std::shared_ptr<Agent>>& redAgents);
-    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents, const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents);
+
+    void update(const std::vector<std::pair<int, int>>& otherAgentsPositions, std::vector<Agent*>& otherAgents,
+        const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents);
     void updateMemory(const std::vector<std::pair<int, int>>& otherAgentsPositions);
     void handleFlagInteractions(const std::vector<std::shared_ptr<Agent>>& blueAgents, const std::vector<std::shared_ptr<Agent>>& redAgents);
     void handleCooldownTimer();
