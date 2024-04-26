@@ -28,7 +28,7 @@ public:
     QGraphicsScene* getScene() const { return scene; }
 
     void clearAgents();
-    void setupAgents(int blueCount, int redCount, int cols, GameManager* gameManager);
+    void setupAgents(int blueCount, int redCount, int cols, int rows, GameManager* gameManager);
     bool isValidPosition(int x, int y);
 
     void runTestCase1();

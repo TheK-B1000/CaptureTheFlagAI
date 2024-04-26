@@ -49,7 +49,7 @@ public:
     float distanceToEnemyFlag() const;
     float distanceToNearestEnemy(const std::vector<std::pair<int, int>>& otherAgentsPositions) const;
     bool isValidPosition(int newX, int newY) const;
-    void respawnInTeamArea();
+    void findAlternativePath();
     float distanceTo(const Agent* otherAgent) const;
     void exploreField();
     void moveTowardsEnemyFlag();
