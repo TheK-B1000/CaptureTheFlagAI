@@ -51,7 +51,7 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
     switch (decision) {
     case BrainDecision::Explore:
         qDebug() << "Exploring field";
-        exploreField();
+        //exploreField();
         break;
     case BrainDecision::GrabFlag:
         qDebug() << "Moving towards enemy flag";
@@ -59,23 +59,23 @@ void Agent::update(const std::vector<std::pair<int, int>>& otherAgentsPositions,
         break;
     case BrainDecision::CaptureFlag:
         qDebug() << "Moving towards home zone";
-        moveTowardsHomeZone();
+        //moveTowardsHomeZone();
         break;
     case BrainDecision::RecoverFlag:
         qDebug() << "Chasing opponent with flag";
-        chaseOpponentWithFlag(otherAgentsPositions);
+        //chaseOpponentWithFlag(otherAgentsPositions);
         break;
     case BrainDecision::TagEnemy:
         qDebug() << "Tagging enemy";
-        tagEnemy(otherAgents);
+        //tagEnemy(otherAgents);
         break;
     case BrainDecision::ReturnToHomeZone:
         qDebug() << "Returning to home zone";
-        moveTowardsHomeZone();
+        //moveTowardsHomeZone();
         break;
     default:
         qDebug() << "Exploring field";
-        exploreField();
+        //exploreField();
         break;
     }
 

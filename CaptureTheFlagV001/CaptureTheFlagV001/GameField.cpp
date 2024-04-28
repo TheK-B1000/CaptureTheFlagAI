@@ -280,16 +280,12 @@ void GameField::updateAgents(int elapsedTime) {
             blueAgentPointers.push_back(blueAgent.get());
         }
 
-        // Log the agent's initial state
-        qDebug() << "Updating red agent at (" << agent->getX() << ", " << agent->getY() << "), carrying flag:" << agent->isCarryingFlag() << ", tagged:" << agent->isTagged();
-
         agent->update(blueAgentPositions, blueAgentPointers, blueAgents, redAgents, elapsedTime);
 
         QGraphicsItem* item = getAgentItem(agent.get());
         updateAgentItemPositions(item, agent);
 
-        // Log the agent's updated state
-        qDebug() << "Updated red agent at (" << agent->getX() << ", " << agent->getY() << "), carrying flag:" << agent->isCarryingFlag() << ", tagged:" << agent->isTagged();
+        qDebug() << "Post-update blue agent position: (" << agent->getX() << ", " << agent->getY() << ")";
 
         // Render the updated agent
         viewport()->update();
@@ -303,16 +299,12 @@ void GameField::updateAgents(int elapsedTime) {
             redAgentPointers.push_back(redAgent.get());
         }
 
-        // Log the agent's initial state
-        qDebug() << "Updating blue agent at (" << agent->getX() << ", " << agent->getY() << "), carrying flag:" << agent->isCarryingFlag() << ", tagged:" << agent->isTagged();
-
         agent->update(redAgentPositions, redAgentPointers, blueAgents, redAgents, elapsedTime);
 
         QGraphicsItem* item = getAgentItem(agent.get());
         updateAgentItemPositions(item, agent);
 
-        // Log the agent's updated state
-        qDebug() << "Updated blue agent at (" << agent->getX() << ", " << agent->getY() << "), carrying flag:" << agent->isCarryingFlag() << ", tagged:" << agent->isTagged();
+        qDebug() << "Post-update red agent position: (" << agent->getX() << ", " << agent->getY() << ")";
 
         // Render the updated agent
         viewport()->update();
@@ -327,12 +319,16 @@ void GameField::updateAgents(int elapsedTime) {
 
 void GameField::updateAgentItemPositions(QGraphicsItem* item, const std::shared_ptr<Agent>& agent) {
     if (item) {
-        int oldX = item->pos().x();
-        int oldY = item->pos().y();
+        int oldX = agent->getX();
+        int oldY = agent->getY();
         bool oldCarryingFlag = agent->isCarryingFlag();
         bool oldTagged = agent->isTagged();
 
         item->setPos(agent->getX(), agent->getY());
+        if (agent->getX() != oldX || agent->getY() != oldY) {
+            qDebug() << "Agent position changed unexpectedly from outside if (" << oldX << ", " << oldY << ") to (" << agent->getX() << ", " << agent->getY() << ")";
+        }
+
 
         QGraphicsEllipseItem* agentItem = qgraphicsitem_cast<QGraphicsEllipseItem*>(item);
         if (agentItem) {
@@ -355,7 +351,7 @@ void GameField::updateAgentItemPositions(QGraphicsItem* item, const std::shared_
 
             // Check for unexpected changes
             if (agent->getX() != oldX || agent->getY() != oldY) {
-                qDebug() << "Agent position changed unexpectedly from (" << oldX << ", " << oldY << ") to (" << agent->getX() << ", " << agent->getY() << ")";
+                qDebug() << "Agent position changed unexpectedly from inside if (" << oldX << ", " << oldY << ") to (" << agent->getX() << ", " << agent->getY() << ")";
             }
         }
     }
@@ -368,6 +364,7 @@ std::vector<std::pair<int, int>> GameField::getAgentPositions(const std::vector<
     std::vector<std::pair<int, int>> positions;
     for (const auto& agent : agents) {
         positions.emplace_back(agent->getX(), agent->getY());
+        qDebug() << "Agent position retrieved: " << agent->getX() << "," << agent->getY();
     }
     return positions;
 }
@@ -376,8 +373,23 @@ void GameField::handleGameTimerTimeout() {
     // Calculate the elapsed time since the last frame
     int elapsedTime = gameTimer->interval();
 
-    // Update the agents based on the elapsed time
+    qDebug() << "Before update:";
+    for (const auto& agent : blueAgents) {
+        qDebug() << "Blue agent position: (" << agent->getX() << ", " << agent->getY() << ")";
+    }
+    for (const auto& agent : redAgents) {
+        qDebug() << "Red agent position: (" << agent->getX() << ", " << agent->getY() << ")";
+    }
+
     updateAgents(elapsedTime);
+
+    qDebug() << "After update:";
+    for (const auto& agent : blueAgents) {
+        qDebug() << "Blue agent position: (" << agent->getX() << ", " << agent->getY() << ")";
+    }
+    for (const auto& agent : redAgents) {
+        qDebug() << "Red agent position: (" << agent->getX() << ", " << agent->getY() << ")";
+    }
 
     // Update the remaining time and display
     timeRemaining -= elapsedTime / 1000;
@@ -452,14 +464,8 @@ void GameField::checkTagging() {
 }
 
 QGraphicsItem* GameField::getAgentItem(Agent* agent) {
-    qDebug() << "Looking for agent item with pointer with getAgentItem:" << agent;
-    qDebug() << "Agent position with getAgentItem: (" << agent->getX() << ", " << agent->getY() << ")";
-    qDebug() << "Agent side with getAgentItem:" << QString::fromStdString(agent->getSide());
-
     for (QGraphicsItem* item : scene->items()) {
-        qDebug() << "Item data with getAgentItem:" << item->data(0).toString();
         if (item->data(0).value<quintptr>() == reinterpret_cast<quintptr>(agent)) {
-            qDebug() << "Found matching item for agent with getAgentItem:" << agent;
             return item;
         }
     }
@@ -558,9 +564,33 @@ void GameField::setupScene() {
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     // Add the combined game field of blue area and red area
-    this->gameField = new QGraphicsRectItem(5, 10, 790, 580);
+    this->gameField = new QGraphicsRectItem(5, 10, gameFieldWidth - 10, gameFieldHeight - 20);
     this->gameField->setPen(QPen(Qt::black, 2));
     scene->addItem(this->gameField);
+
+    // Add grid lines and labels
+    QPen gridPen(Qt::gray, 1, Qt::DotLine);
+    for (int x = 0; x < gameFieldWidth; x += 10) {
+        QGraphicsLineItem* gridLine = new QGraphicsLineItem(x, 0, x, gameFieldHeight);
+        gridLine->setPen(gridPen);
+        scene->addItem(gridLine);
+
+        // Add horizontal labels at the top of the scene
+        auto label = new QGraphicsTextItem(QString::number(x));
+        label->setPos(x, 0);
+        scene->addItem(label);
+    }
+
+    for (int y = 0; y < gameFieldHeight; y += 10) {
+        QGraphicsLineItem* gridLine = new QGraphicsLineItem(0, y, gameFieldWidth, y);
+        gridLine->setPen(gridPen);
+        scene->addItem(gridLine);
+
+        // Add vertical labels at the left of the scene
+        auto label = new QGraphicsTextItem(QString::number(y));
+        label->setPos(0, y);
+        scene->addItem(label);
+    }
 
     // Add team areas fields
     QGraphicsRectItem* blueArea = new QGraphicsRectItem(5, 10, 400, 580);
